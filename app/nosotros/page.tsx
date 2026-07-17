@@ -5,7 +5,7 @@ import Image from 'next/image';
 export default function Nosotros() {
     // Array de imágenes para el mosaico apuntando a tus archivos locales
     const fotosMosaico = [
-        { id: 1, src: '/lasvegas.jpg', alt: 'Luces de neón en la pista', className: 'col-span-2 row-span-2 h-64 md:h-80' },
+        { id: 1, src: '/lasVegas.jpg', alt: 'Luces de neón en la pista', className: 'col-span-2 row-span-2 h-64 md:h-80' },
         { id: 2, src: '/lasvegas1.webp', alt: 'DJ mezclando en vivo', className: 'col-span-1 row-span-1 h-32 md:h-36' },
         { id: 3, src: '/lasvegas2.jpg', alt: 'Cócteles premium con brillo ultravioleta', className: 'col-span-1 row-span-1 h-32 md:h-36' },
         { id: 4, src: '/lasvegas3.jpg', alt: 'Gente disfrutando la rumba', className: 'col-span-2 row-span-1 h-32 md:h-40' },
