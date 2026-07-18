@@ -12,8 +12,8 @@ export default function Nosotros() {
     ];
 
     return (
-        <main
-            className="relative min-h-screen pt-28 pb-16 px-4 sm:px-6 lg:px-8 bg-cover bg-center bg-no-repeat flex items-center"
+        <main 
+            className="relative min-h-screen pt-14 pb-12 px-4 sm:px-6 lg:px-8 bg-cover bg-center bg-no-repeat flex items-start md:items-center overflow-hidden select-none"
             style={{ backgroundImage: "url('/fondo.webp')" }}
         >
             {/* Capa de superposición para oscurecer el fondo.webp y darle un tinte Neo-Punk */}
@@ -36,7 +36,6 @@ export default function Nosotros() {
                                 src={foto.src}
                                 alt={foto.alt}
                                 fill
-
                                 sizes="(max-w-7xl) 50vw, 100vw"
                                 className="object-cover transition-transform duration-500 group-hover:scale-105"
                                 priority={foto.id === 1} // Prioridad a la imagen principal del mosaico
@@ -48,16 +47,16 @@ export default function Nosotros() {
                 {/* LADO DERECHO: Texto de Historia / Atributos con Estilo Neón */}
                 <div className="lg:col-span-6 flex flex-col space-y-6 order-1 lg:order-2 text-left">
 
-                    {/* Tag de Ubicación Superior */}
+                    {/* Tag de Ubicación Superior - Con Orbitron */}
                     <div className="inline-flex items-center gap-2 self-start px-3 py-1 rounded-md bg-[#ff00a0]/10 border border-[#ff00a0]/40 shadow-[0_0_10px_rgba(255,0,160,0.2)]">
                         <span className="w-2 h-2 rounded-full bg-[#ff00a0] animate-ping" />
-                        <span className="font-sans font-black text-xs uppercase tracking-[0.2em] text-[#ff00a0]">
+                        <span className="font-orbitron font-black text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[#ff00a0]">
                             Sopetrán, Antioquia
                         </span>
                     </div>
 
-                    {/* Título Principal */}
-                    <h1 className="font-sans font-black text-4xl sm:text-5xl lg:text-6xl uppercase tracking-tight text-white leading-none">
+                    {/* Título Principal - Con Orbitron */}
+                    <h1 className="font-orbitron font-black text-4xl sm:text-5xl lg:text-6xl uppercase tracking-wider text-white leading-none">
                         El Epicentro de la <br />
                         <span className="text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]">
                             Noche Eterna
@@ -67,20 +66,27 @@ export default function Nosotros() {
                     {/* Línea Separadora Neón Blanco */}
                     <hr className="border-none h-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.7)] w-24 opacity-80" />
 
-                    {/* Párrafo 1 - con neón en todas las menciones */}
-                    <p className="font-sans text-base sm:text-lg text-gray-300 leading-relaxed font-medium">
+                    {/* Párrafo 1 - Solo "Vegas" se enciende en Cian Eléctrico */}
+                    <p className="font-space font-medium text-base sm:text-lg text-gray-300 leading-relaxed">
                         Bajo el hechizo de las luces que encienden la noche y el ritmo imparable de la mejor música,{' '}
-                        <span className="text-[#2ee6d6] font-bold tracking-wide drop-shadow-[0_0_10px_#2ee6d6,_0_0_30px_#2ee6d6,_0_0_60px_#2ee6d6]">
-                            Las Vegas Discobar
+                        <span className="font-orbitron font-medium tracking-wide text-white">
+                            Las{' '}
+                            <span className="font-black text-[#2ee6d6] drop-shadow-[0_0_10px_#2ee6d6,_0_0_25px_#2ee6d6]">
+                                Vegas
+                            </span>{' '}
+                            Discobar
                         </span>{' '}
                         se ha convertido en el epicentro de la vida nocturna en Sopetrán, tierra turística del occidente antioqueño. No somos un simple bar: somos una experiencia sensorial donde la intensidad, el estilo y la autenticidad se viven desde el primer beat.
                     </p>
 
-                    {/* Párrafo 2 - con neón en todas las menciones */}
-                    <p className="font-sans text-[15px] sm:text-base text-gray-300 leading-relaxed mt-4">
+                    {/* Párrafo 2 - Solo "DiscoBar" se enciende en Violeta Neo-Punk */}
+                    <p className="font-space font-normal text-[15px] sm:text-base text-gray-300 leading-relaxed mt-4">
                         Con una ubicación privilegiada, un diseño industrial-neón, acústica de primer nivel y un ambiente seguro, hemos creado el escenario perfecto para noches inolvidables. Por eso, locales y visitantes nos eligen cada fin de semana: porque en{' '}
-                        <span className="text-[#2ee6d6] font-bold tracking-wide drop-shadow-[0_0_10px_#2ee6d6,_0_0_30px_#2ee6d6,_0_0_60px_#2ee6d6]">
-                            Las Vegas Discobar
+                        <span className="font-orbitron font-medium tracking-wide text-white">
+                            Las Vegas{' '}
+                            <span className="font-black text-[#9b5de5] drop-shadow-[0_0_10px_#9b5de5,_0_0_25px_#9b5de5]">
+                                DiscoBar
+                            </span>
                         </span>
                         , la fiesta no tiene límites.
                     </p>
@@ -88,28 +94,22 @@ export default function Nosotros() {
                     {/* Atributos / Características del Sitio */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
 
-                        {/* Atributo 1 */}
-
-
-                        {/* Atributo 2 */}
-
-
-                        {/* Atributo 3 */}
+                        {/* Atributo 3 - Con Orbitron y Space Grotesk */}
                         <div className="p-4 rounded-xl border border-[#1f1645] bg-[#060413]/60 backdrop-blur-sm hover:border-white/40 transition-all duration-300">
-                            <h3 className="font-sans font-black text-xs uppercase tracking-widest text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)] mb-1">
+                            <h3 className="font-orbitron font-black text-[11px] sm:text-xs uppercase tracking-widest text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.5)] mb-1">
                                 🍹 Coctelería Alquímica
                             </h3>
-                            <p className="text-xs text-gray-400">
+                            <p className="font-space font-normal text-xs text-gray-400 leading-normal">
                                 Barras iluminadas con tragos de autor diseñados para brillar en la oscuridad.
                             </p>
                         </div>
 
-                        {/* Atributo 4 */}
+                        {/* Atributo 4 - Con Orbitron y Space Grotesk */}
                         <div className="p-4 rounded-xl border border-[#1f1645] bg-[#060413]/60 backdrop-blur-sm hover:border-purple-500/50 transition-all duration-300">
-                            <h3 className="font-sans font-black text-xs uppercase tracking-widest text-purple-400 mb-1">
+                            <h3 className="font-orbitron font-black text-[11px] sm:text-xs uppercase tracking-widest text-purple-400 mb-1">
                                 🕹️ Zona Interactiva
                             </h3>
-                            <p className="text-xs text-gray-400">
+                            <p className="font-space font-normal text-xs text-gray-400 leading-normal">
                                 Pantallas y dinámicas integradas en tu mesa para competir por premios reales en vivo.
                             </p>
                         </div>

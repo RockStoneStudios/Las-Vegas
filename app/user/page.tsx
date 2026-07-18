@@ -49,7 +49,7 @@ export default function HeroSection() {
       duration: 4,
       repeat: -1,
       ease: 'none',
-      onUpdate: function() {
+      onUpdate: function () {
         const targets = this.targets();
         if (targets && targets[0]) {
           const currentOpacity = gsap.getProperty(targets[0], 'opacity') as number;
@@ -76,7 +76,7 @@ export default function HeroSection() {
       duration: 3,
       repeat: -1,
       ease: 'none',
-      onUpdate: function() {
+      onUpdate: function () {
         const targets = this.targets();
         if (targets && targets[0]) {
           const currentOpacity = gsap.getProperty(targets[0], 'opacity') as number;
@@ -93,25 +93,37 @@ export default function HeroSection() {
       if (!contenedorBar) return;
 
       const chispa = document.createElement('span');
-      chispa.className = 'absolute w-[2px] h-[6px] sm:w-[3px] h-[8px] bg-white rounded-full pointer-events-none z-50';
-      chispa.style.boxShadow = '0 0 8px #fff, 0 0 15px #e2e8f0';
+
+      // Mantenemos tu clase original de chispa blanca estilizada
+      chispa.className = 'absolute w-[2px] h-[6px] sm:w-[3px] sm:h-[8px] bg-white rounded-full pointer-events-none z-50';
+      chispa.style.boxShadow = '0 0 8px #fff, 0 0 15px #22d3ee'; // Brillo blanco con halo cian eléctrico
+
+      // 1. NACIMIENTO: Forzamos a que aparezca abajo en el contenedor (90%)
       chispa.style.left = `${Math.random() * 100}%`;
-      chispa.style.top = '80%';
+      chispa.style.top = '90%';
 
       contenedorBar.appendChild(chispa);
 
+      // 2. EXPLOSIÓN: Movimiento estrictamente negativo en 'y' para que suba
       gsap.to(chispa, {
-        x: (Math.random() - 0.5) * 40,
-        y: Math.random() * 150 + 80,
-        rotation: (Math.random() - 0.5) * 45,
-        scaleY: 0.2,
+        // Dispersión hacia los lados (caótico)
+        x: (Math.random() - 0.5) * 160,
+
+        // Al ser negativo, resta píxeles al "top: 90%" y la obliga a subir disparada
+        y: -Math.random() * 150 - 50,
+
+        // Se encoge a 0 mientras desaparece rápido, igual que tu ejemplo
+        scale: 0,
         opacity: 0,
-        duration: Math.random() * 0.6 + 0.4,
-        ease: 'power1.in',
+
+        // Duración ultra rápida de cortocircuito errático
+        duration: Math.random() * 0.3 + 0.15,
+
+        // El ease 'expo.out' le da el latigazo inicial y se frena arriba
+        ease: 'expo.out',
         onComplete: () => chispa.remove()
       });
     }
-
     // FUNCIÓN: CHISPAS VIOLETAS EXPLOSIVAS
     function crearChispaVioleta() {
       const contenedorSopetran = document.querySelector('.contenedor-sopetran');
