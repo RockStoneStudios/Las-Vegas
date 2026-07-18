@@ -5,6 +5,7 @@ import "./globals.css";
 // 1. IMPORTAMOS EL NAVBAR
 // (Ajusta la ruta "@/" si guardaste tu archivo en otro directorio, ej: "./components/Navbar")
 import Navbar from "@/app/components/Navbar"; 
+import { MesaProvider } from "@/lib/context/MesaContext";
 
 const orbitron = Orbitron({
   subsets: ['latin'],
@@ -43,10 +44,10 @@ export default function RootLayout({
         
         {/* 4. ENVOLVEMOS EL CONTENIDO EN UN MAIN CON pt-20 (Padding Top de 80px)
             Esto evita que el Navbar fijo tape el contenido de tus páginas */}
-        <main className="flex-grow pt-20 flex flex-col">
+        <main className="grow pt-20 flex flex-col">
           {children}
+        
         </main>
-
       </body>
     </html>
   );
