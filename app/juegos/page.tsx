@@ -1,13 +1,12 @@
-// app/juegos/page.tsx (o donde tengas esta vista)
 'use client';
 
 import { useMesa } from '@/lib/context/MesaContext';
-import { useSimulacionJuego } from '@/lib/hooks/useSimulacionJuego';
+import { useSimulacionJuego } from '@/lib/context/PanelControlContext'; // 👈 único cambio
 import { JUEGOS_CONFIG } from '@/lib/types/juegos';
 import TarjetaJuego from '@/app/components/juegos/TargetaJuego';
 import PanelSimulacionAdmin from '@/app/components/juegos/PanelSimulacionAdmin';
 
-export default function CajonesPage() {
+export default function JuegosPage() {
   const { numeroMesa, setNumeroMesa } = useMesa();
   const { estado, activarJuego, desactivarJuego } = useSimulacionJuego();
 
@@ -39,13 +38,11 @@ export default function CajonesPage() {
         }
       `}</style>
 
-      {/* Título Principal */}
-      <h1 className="font-orbitron text-3xl md:text-5xl font-black text-white mb-4 uppercase tracking-[0.2em] animacion-corto text-center">
+      <h1 className="font-orbitron text-3xl md:text-5xl font-black text-white mb-4 uppercase tracking-[0.2em] animacion-corto">
         Juegos de la noche
       </h1>
 
-      {/* Subtítulo Dinámico */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center">
         <p
           className={`font-space font-bold text-xs md:text-sm tracking-widest uppercase px-6 py-2.5 rounded-xl border backdrop-blur-md transition-all duration-500 ${
             hayJuegoActivo
@@ -71,7 +68,7 @@ export default function CajonesPage() {
           return (
             <TarjetaJuego
               key={juego.id}
-              id={juego.id} // 👈 Pasamos la ID del juego
+              id={juego.id} 
               nombre={juego.nombre}
               icono={juego.icono}
               tipo={juego.tipo}

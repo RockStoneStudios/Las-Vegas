@@ -10,12 +10,12 @@ export default function PaginaAdmin() {
   return (
     <main className="relative min-h-screen pt-28 pb-12 px-4 sm:px-6 lg:px-8 bg-[#020106] flex flex-col items-center gap-8 overflow-hidden select-none">
       {/* Capa de fondo con degradado Neo-Punk */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#060413] via-[#020106] to-[#0a071d] z-0" />
+      <div className="absolute inset-0 bg-linear-to-tr from-[#060413] via-[#020106] to-[#0a071d] z-0" />
       
       {/* Título Principal Ultra Llamativo - Con Orbitron e Hiper-Neón */}
       <h1 className="relative z-10 font-orbitron font-black text-2xl sm:text-4xl uppercase tracking-[0.2em] text-white text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] leading-none">
         ZONA DE JUEGO: <br className="sm:hidden" />
-        <span className="text-[#2ee6d6] drop-shadow-[0_0_12px_#2ee6d6,_0_0_30px_#2ee6d6] animate-pulse ml-2 sm:ml-0">
+        <span className="text-[#2ee6d6] drop-shadow-[0_0_12px_#2ee6d6,0_0_30px_#2ee6d6] animate-pulse ml-2 sm:ml-0">
           PRUEBA TU SUERTE
         </span>
       </h1>

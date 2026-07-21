@@ -25,7 +25,7 @@ function generarCartas(): CartaRuleta[] {
   }));
 }
 
-export function useRuletaSimulada() {
+export function useCincoCajones() {
   const [cartas, setCartas] = useState<CartaRuleta[]>(() => generarCartas());
   const [activa, setActiva] = useState(true);
 

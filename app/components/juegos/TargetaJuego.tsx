@@ -1,4 +1,3 @@
-// app/components/juegos/TargetaJuego.tsx
 'use client';
 
 import Link from 'next/link';
@@ -24,19 +23,13 @@ export default function TarjetaJuego({
   disponibleParaMi,
   mesaObjetivo,
 }: Props) {
-  // 💡 Mapeo correcto de rutas dentro de /juegos/
-  const obtenerRutaJuego = (juegoId: JuegoId) => {
-    switch (juegoId) {
-      case 'ruleta':
-        return '/juegos/ruleta';
-      case 'cajas':
-        return '/juegos/cajones'; // 👈 Apunta a la página de cajones
-      default:
-        return `/juegos/${juegoId}`;
-    }
-  };
-
-  const rutaJuego = obtenerRutaJuego(id);
+  // 💡 Solución al error de TypeScript: Casteo a string para permitir ambos alias ('cajones' o 'cajas')
+  const idStr = id as string;
+  const rutaJuego = idStr === 'cajas' || idStr === 'cajones' 
+    ? '/juegos/cajones' 
+    : idStr === 'ruleta' 
+    ? '/juegos/ruleta' 
+    : `/juegos/${id}`;
 
   return (
     <div
@@ -44,11 +37,11 @@ export default function TarjetaJuego({
         disponibleParaMi
           ? 'border-[#2ee6d6] bg-[#0c0824]/90 shadow-[0_0_25px_rgba(46,230,214,0.3)] scale-[1.03]'
           : activo
-          ? 'border-[#ff00a0]/40 bg-[#060413]/70 opacity-80 shadow-[0_0_15px_rgba(255,0,160,0.1)]'
+          ? 'border-[#ff00a0]/40 bg-[#060413]/70 opacity-90 shadow-[0_0_15px_rgba(255,0,160,0.15)]'
           : 'border-white/5 bg-[#020106]/40 opacity-40 grayscale pointer-events-none'
       }`}
     >
-      {/* Indicador de Estado Superior Derecho */}
+      {/* Indicador de Estado */}
       <div className="absolute top-3 right-3 font-orbitron font-black text-[10px] tracking-widest uppercase px-2 py-0.5 rounded-sm border bg-[#020106]/90 shadow-[0_0_8px_rgba(0,0,0,0.5)] z-10">
         {disponibleParaMi ? (
           <span className="text-[#2ee6d6] drop-shadow-[0_0_5px_#2ee6d6] animate-pulse">LIVE ⚡</span>
@@ -62,7 +55,7 @@ export default function TarjetaJuego({
       {/* Icono del Juego */}
       <div className={`my-1 transition-all duration-300 ${disponibleParaMi ? 'filter drop-shadow-[0_0_12px_rgba(46,230,214,0.8)]' : ''}`}>
         {Icono && (
-          <Icono className={`w-12 h-12 ${disponibleParaMi ? 'text-[#2ee6d6]' : 'text-gray-400'}`} />
+          <Icono className={`w-12 h-12 ${disponibleParaMi ? 'text-[#2ee6d6]' : activo ? 'text-[#ff00a0]' : 'text-gray-400'}`} />
         )}
       </div>
 
@@ -71,7 +64,7 @@ export default function TarjetaJuego({
         {nombre}
       </h3>
 
-      {/* Tag de Tipo de Juego */}
+      {/* Tag de Tipo */}
       <span
         className={`font-space font-black text-[10px] uppercase tracking-[0.2em] px-3 py-1 rounded-md border bg-[#020106]/60 ${
           tipo === 'global' 
@@ -82,20 +75,24 @@ export default function TarjetaJuego({
         {tipo === 'global' ? '🌐 Evento Global' : '💎 Reto Premium'}
       </span>
 
-      {/* BOTÓN O LINK REACTIVO */}
-      {disponibleParaMi && (
+      {/* BOTÓN REACTIVO */}
+      {activo && (
         <Link
           href={rutaJuego}
-          className="w-full mt-2 py-3 rounded-xl bg-[#2ee6d6] font-orbitron font-black text-xs tracking-widest text-black uppercase shadow-[0_0_20px_rgba(46,230,214,0.5)] hover:shadow-[0_0_35px_rgba(46,230,214,0.8)] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 cursor-pointer block text-center"
+          className={`w-full mt-2 py-3 rounded-xl font-orbitron font-black text-xs tracking-widest uppercase transition-all duration-200 block text-center cursor-pointer ${
+            disponibleParaMi
+              ? 'bg-[#2ee6d6] text-black shadow-[0_0_20px_rgba(46,230,214,0.5)] hover:shadow-[0_0_35px_rgba(46,230,214,0.8)] hover:bg-white hover:scale-[1.02]'
+              : 'border border-[#ff00a0]/60 text-[#ff00a0] bg-[#ff00a0]/10 hover:bg-[#ff00a0]/20 shadow-[0_0_15px_rgba(255,0,160,0.3)]'
+          }`}
         >
-          ¡INGRESAR AL RETO!
+          {disponibleParaMi ? '¡INGRESAR AL RETO!' : 'VER JUEGO EN VIVO'}
         </Link>
       )}
 
-      {/* Textos Informativos de Estado */}
+      {/* Mensajes de Estado */}
       <div className="font-space font-medium text-xs tracking-wide">
         {activo && !disponibleParaMi && tipo === 'por_mesa' && (
-          <p className="text-[#ff00a0] drop-shadow-[0_0_4px_rgba(255,0,160,0.3)] animate-pulse">
+          <p className="text-[#ff00a0] drop-shadow-[0_0_4px_rgba(255,0,160,0.3)]">
             🎮 Jugando ahora: <span className="font-bold text-white bg-[#ff00a0]/20 px-1.5 py-0.5 rounded-sm">Mesa {mesaObjetivo}</span>
           </p>
         )}
@@ -106,11 +103,6 @@ export default function TarjetaJuego({
           </p>
         )}
       </div>
-
-      {/* Línea decorativa neón inferior */}
-      {disponibleParaMi && (
-        <div className="absolute bottom-0 left-0 h-[2px] w-full bg-[#2ee6d6] shadow-[0_0_10px_#2ee6d6]" />
-      )}
     </div>
   );
 }

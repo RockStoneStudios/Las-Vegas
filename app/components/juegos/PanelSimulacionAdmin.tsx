@@ -1,3 +1,4 @@
+// app/components/juegos/PanelSimulacionAdmin.tsx
 'use client';
 
 import { useState, useEffect } from 'react';

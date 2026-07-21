@@ -17,4 +17,5 @@ export const PREMIOS_BASE: Omit<Premio, 'id'>[] = [
   { texto: 'Una ronda de cerveza', esGanador: true, emoji: '🍺' },
   { texto: 'No ganaste', esGanador: false, emoji: '💀' },
   { texto: 'No ganaste', esGanador: false, emoji: '💀' },
+  { texto: 'Una ronda de cerveza', esGanador: true, emoji: '🍺' },
 ];
