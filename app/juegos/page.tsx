@@ -1,3 +1,4 @@
+// app/juegos/page.tsx (o donde tengas esta vista)
 'use client';
 
 import { useMesa } from '@/lib/context/MesaContext';
@@ -6,7 +7,7 @@ import { JUEGOS_CONFIG } from '@/lib/types/juegos';
 import TarjetaJuego from '@/app/components/juegos/TargetaJuego';
 import PanelSimulacionAdmin from '@/app/components/juegos/PanelSimulacionAdmin';
 
-export default function JuegosPage() {
+export default function CajonesPage() {
   const { numeroMesa, setNumeroMesa } = useMesa();
   const { estado, activarJuego, desactivarJuego } = useSimulacionJuego();
 
@@ -21,7 +22,8 @@ export default function JuegosPage() {
         onDesactivar={desactivarJuego}
         juegoActivo={estado.juegoActivo}
       />
-<style jsx global>{`
+
+      <style jsx global>{`
         @keyframes cortocircuito {
           0%, 18%, 22%, 25%, 53%, 57%, 100% {
             opacity: 1;
@@ -37,13 +39,13 @@ export default function JuegosPage() {
         }
       `}</style>
 
-      {/* Título Principal con Fuente Orbitron, Neón y Efecto de Cortocircuito */}
-      <h1 className="font-orbitron text-3xl md:text-5xl font-black text-white mb-4 uppercase tracking-[0.2em] animacion-corto">
+      {/* Título Principal */}
+      <h1 className="font-orbitron text-3xl md:text-5xl font-black text-white mb-4 uppercase tracking-[0.2em] animacion-corto text-center">
         Juegos de la noche
       </h1>
 
-      {/* Subtítulo Dinámico con Badge Reactivo y la fuente Space */}
-      <div className="flex justify-center">
+      {/* Subtítulo Dinámico */}
+      <div className="flex justify-center mb-8">
         <p
           className={`font-space font-bold text-xs md:text-sm tracking-widest uppercase px-6 py-2.5 rounded-xl border backdrop-blur-md transition-all duration-500 ${
             hayJuegoActivo
@@ -69,6 +71,7 @@ export default function JuegosPage() {
           return (
             <TarjetaJuego
               key={juego.id}
+              id={juego.id} // 👈 Pasamos la ID del juego
               nombre={juego.nombre}
               icono={juego.icono}
               tipo={juego.tipo}
