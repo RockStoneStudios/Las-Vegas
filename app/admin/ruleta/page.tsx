@@ -129,7 +129,7 @@ export default function PaginaAdmin() {
 
       {/* Formulario de Configuración */}
       {!ruletaGenerada && (
-        <div className="relative z-10 flex flex-col gap-6 items-center w-full max-w-md bg-[#060413]/60 backdrop-blur-md border border-[#1f1645] p-8 rounded-2xl shadow-[0_0_25px_rgba(31,22,69,0.4)] hover:border-purple-500/30 transition-all duration-300">
+        <div className="relative z-10  mt-21 flex flex-col gap-6 items-center w-full max-w-md bg-[#060413]/60 backdrop-blur-md border border-[#1f1645] p-8 rounded-2xl shadow-[0_0_25px_rgba(31,22,69,0.4)] hover:border-purple-500/30 transition-all duration-300">
           <label className="font-space font-medium text-sm sm:text-base text-gray-300 flex flex-col sm:flex-row items-center gap-3 w-full justify-between">
             <span className="uppercase tracking-wider text-xs font-bold text-purple-400">
               🎰 ¿Cuántas mesas juegan?
