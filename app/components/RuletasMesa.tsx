@@ -66,7 +66,7 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
     setIndiceRuletaGanador(null);
 
     // Ajustado estrictamente entre 7 y 11 segundos
-    const segundosAleatorios = obtenerAleatorio(18, 23);
+    const segundosAleatorios = obtenerAleatorio(11, 15);
     setDuracionActual(segundosAleatorios);
     const milisegundosSorteo = segundosAleatorios * 1000;
 
@@ -161,10 +161,12 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
       </div>
 
       {/* Contenedor Fijo Grande */}
-      <div className="relative w-full max-w-[550px] aspect-square flex items-center justify-center">
+     {/* </div> <div className="relative w-full max-w-[550px] 2xl:max-w-[800px] tv:max-w-[85vh] aspect-square flex items-center justify-center"> */}
+      <div className="relative w-full max-w-137.5 aspect-square flex items-center justify-center">
         {modo === 'ruleta' ? (
           <>
             {/* Indicador de aguja superior (Usando color cian plano de Tailwind) */}
+            {/* <div className="absolute -top-4 2xl:-top-6 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[16px] 2xl:border-l-[24px] border-l-transparent border-r-[16px] 2xl:border-r-[24px] border-r-transparent border-t-[32px] 2xl:border-t-[48px] border-t-cyan-400 z-10 drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]" /> */}
             <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-0 height-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[32px] border-t-cyan-400 z-10 drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
             
             <svg
