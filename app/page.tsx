@@ -32,21 +32,21 @@ export default function HeroSection() {
 
     // 2. ANIMACIONES INFINITAS
 
-    // A. Neón parpadeante blanco + CHISPAS CAYENDO para "Bar"
+    // A. Neón suave parpadeante para "Bar"
     gsap.to('.anim-bar', {
       keyframes: {
-        '0%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' },
-        '7%': { opacity: 0.85, textShadow: '0 0 4px #fff, 0 0 10px #fff' },
-        '8%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' },
+        '0%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
+        '7%': { opacity: 0.85, textShadow: '0 0 2px #fff, 0 0 6px #fff' },
+        '8%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
         '12%': { opacity: 0.3, textShadow: 'none' },
-        '14%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' },
-        '30%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' },
+        '14%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
+        '30%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
         '32%': { opacity: 0.2, textShadow: 'none' },
-        '34%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' },
-        '70%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' },
+        '34%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
+        '70%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
         '72%': { opacity: 0.3, textShadow: 'none' },
-        '73%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' },
-        '100%': { opacity: 1, textShadow: '0 0 8px #fff, 0 0 20px #fff, 0 0 40px #fff' }
+        '73%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
+        '100%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' }
       },
       duration: 4,
       repeat: -1,
@@ -55,25 +55,25 @@ export default function HeroSection() {
         const targets = this.targets();
         if (targets && targets[0]) {
           const currentOpacity = gsap.getProperty(targets[0], 'opacity') as number;
-          if (currentOpacity < 0.5 && Math.random() > 0.3) {
+          if (currentOpacity < 0.5 && Math.random() > 0.4) {
             crearChispaBlanca();
           }
         }
       }
     });
 
-    // B. Neón parpadeante violeta + chispas explosivas para "Sopetrán"
+    // B. Neón tenue para "Sopetrán"
     gsap.to('.anim-sopetran', {
       keyframes: {
-        '0%': { opacity: 1, textShadow: '0 0 8px #ff3ea5, 0 0 20px #ff3ea5, 0 0 40px #9b5de5' },
+        '0%': { opacity: 1, textShadow: '0 0 4px #ff3ea5, 0 0 12px #9b5de5' },
         '4%': { opacity: 0.2, textShadow: 'none' },
-        '6%': { opacity: 1, textShadow: '0 0 14px #ff3ea5, 0 0 30px #9b5de5' },
+        '6%': { opacity: 1, textShadow: '0 0 8px #ff3ea5, 0 0 16px #9b5de5' },
         '9%': { opacity: 0.3, textShadow: 'none' },
-        '11%': { opacity: 1, textShadow: '0 0 8px #ff3ea5, 0 0 20px #ff3ea5, 0 0 40px #9b5de5' },
-        '50%': { opacity: 1, textShadow: '0 0 8px #ff3ea5, 0 0 20px #ff3ea5, 0 0 40px #9b5de5' },
+        '11%': { opacity: 1, textShadow: '0 0 4px #ff3ea5, 0 0 12px #9b5de5' },
+        '50%': { opacity: 1, textShadow: '0 0 4px #ff3ea5, 0 0 12px #9b5de5' },
         '52%': { opacity: 0.2, textShadow: 'none' },
-        '54%': { opacity: 1, textShadow: '0 0 12px #ff3ea5, 0 0 25px #9b5de5' },
-        '100%': { opacity: 1, textShadow: '0 0 8px #ff3ea5, 0 0 20px #ff3ea5, 0 0 40px #9b5de5' }
+        '54%': { opacity: 1, textShadow: '0 0 6px #ff3ea5, 0 0 14px #9b5de5' },
+        '100%': { opacity: 1, textShadow: '0 0 4px #ff3ea5, 0 0 12px #9b5de5' }
       },
       duration: 3,
       repeat: -1,
@@ -82,7 +82,7 @@ export default function HeroSection() {
         const targets = this.targets();
         if (targets && targets[0]) {
           const currentOpacity = gsap.getProperty(targets[0], 'opacity') as number;
-          if (currentOpacity < 0.5 && Math.random() > 0.4) {
+          if (currentOpacity < 0.5 && Math.random() > 0.5) {
             crearChispaVioleta();
           }
         }
@@ -96,7 +96,7 @@ export default function HeroSection() {
 
       const chispa = document.createElement('span');
       chispa.className = 'absolute w-[2px] h-[6px] sm:w-[3px] h-[8px] bg-white rounded-full pointer-events-none z-50';
-      chispa.style.boxShadow = '0 0 8px #fff, 0 0 15px #e2e8f0';
+      chispa.style.boxShadow = '0 0 4px #fff';
       chispa.style.left = `${Math.random() * 100}%`;
       chispa.style.top = '80%';
 
@@ -114,14 +114,14 @@ export default function HeroSection() {
       });
     }
 
-    // FUNCIÓN: CHISPAS VIOLETAS EXPLOSIVAS
+    // FUNCIÓN: CHISPAS VIOLETAS
     function crearChispaVioleta() {
       const contenedorSopetran = document.querySelector('.contenedor-sopetran');
       if (!contenedorSopetran) return;
 
       const chispa = document.createElement('span');
       chispa.className = 'absolute w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-white pointer-events-none z-50';
-      chispa.style.boxShadow = '0 0 8px #ff3ea5, 0 0 15px #9b5de5';
+      chispa.style.boxShadow = '0 0 5px #ff3ea5';
       chispa.style.left = `${Math.random() * 100}%`;
       chispa.style.top = `${Math.random() * 100}%`;
 
@@ -148,23 +148,21 @@ export default function HeroSection() {
     gsap.to('.anim-hoja-inf-izq', { rotate: 1, x: 1, y: 1, duration: 8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
     gsap.to('.anim-hoja-inf-der', { rotate: -1, x: -1, y: 1, duration: 9, repeat: -1, yoyo: true, ease: 'sine.inOut' });
 
-    // ✅ 3. LUCES DE DISCOTECA - MOVIMIENTO REAL CON GSAP
+    // ✅ LUCES DE DISCOTECA - MOVIMIENTO ATENUADO
     function moverLuz(el: Element) {
-      // Movimiento principal
       gsap.to(el, {
         x: gsap.utils.random(-window.innerWidth * 0.4, window.innerWidth * 0.4),
         y: gsap.utils.random(-window.innerHeight * 0.4, window.innerHeight * 0.4),
-        scale: gsap.utils.random(0.8, 2.0),
-        opacity: gsap.utils.random(0.3, 0.8),
-        duration: gsap.utils.random(4, 8),
+        scale: gsap.utils.random(0.8, 1.6),
+        opacity: gsap.utils.random(0.08, 0.22), // Reducido notablemente para no encandilar
+        duration: gsap.utils.random(5, 10),
         ease: 'sine.inOut',
         onComplete: () => moverLuz(el),
       });
       
-      // Cambio de color
       gsap.to(el, {
         backgroundColor: COLORES_LUCES[Math.floor(Math.random() * COLORES_LUCES.length)],
-        duration: gsap.utils.random(3, 7),
+        duration: gsap.utils.random(4, 8),
         ease: 'sine.inOut',
       });
     }
@@ -172,15 +170,13 @@ export default function HeroSection() {
     // Iniciar movimiento de luces
     const luces = gsap.utils.toArray('.luz-disco');
     luces.forEach((luz, i) => {
-      // Posición inicial aleatoria
       gsap.set(luz as Element, {
         x: gsap.utils.random(-window.innerWidth * 0.2, window.innerWidth * 0.2),
         y: gsap.utils.random(-window.innerHeight * 0.2, window.innerHeight * 0.2),
-        scale: gsap.utils.random(0.8, 1.5),
-        opacity: gsap.utils.random(0.3, 0.6),
+        scale: gsap.utils.random(0.8, 1.3),
+        opacity: gsap.utils.random(0.08, 0.18),
       });
       
-      // Iniciar con delay
       gsap.delayedCall(i * 0.5, () => moverLuz(luz as Element));
     });
 
@@ -195,7 +191,7 @@ export default function HeroSection() {
         @keyframes letraNeon {
           0%, 42% {
             opacity: 1;
-            text-shadow: 0 0 6px #fff, 0 0 16px #22d3ee, 0 0 32px #22d3ee;
+            text-shadow: 0 0 4px #fff, 0 0 10px #22d3ee;
           }
           50% {
             opacity: 0.25;
@@ -203,35 +199,36 @@ export default function HeroSection() {
           }
           58%, 100% {
             opacity: 1;
-            text-shadow: 0 0 6px #fff, 0 0 16px #22d3ee, 0 0 32px #22d3ee;
+            text-shadow: 0 0 4px #fff, 0 0 10px #22d3ee;
           }
         }
         .letra-secuencial {
           animation: letraNeon 3s ease-in-out infinite;
         }
         
+        /* Sombras atenuadas */
         .tarjeta-shadow-cyan {
-          box-shadow: 0 0 40px rgba(34, 211, 238, 0.6), 0 0 80px rgba(34, 211, 238, 0.2);
+          box-shadow: 0 0 20px rgba(34, 211, 238, 0.25), 0 0 40px rgba(34, 211, 238, 0.1);
         }
         .tarjeta-shadow-fucsia {
-          box-shadow: 0 0 40px rgba(255, 62, 165, 0.7), 0 0 80px rgba(255, 62, 165, 0.25);
+          box-shadow: 0 0 20px rgba(255, 62, 165, 0.3), 0 0 40px rgba(255, 62, 165, 0.1);
         }
         .tarjeta-shadow-violeta {
-          box-shadow: 0 0 40px rgba(155, 93, 229, 0.6), 0 0 80px rgba(155, 93, 229, 0.2);
+          box-shadow: 0 0 20px rgba(155, 93, 229, 0.25), 0 0 40px rgba(155, 93, 229, 0.1);
         }
       `}</style>
 
-      {/* ✅ LUCES DE DISCOTECA EN MOVIMIENTO */}
+      {/* ✅ LUCES DE DISCOTECA - MÁS DIFUMINADAS Y SUTILES */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {COLORES_LUCES.map((color, i) => (
           <div
             key={i}
-            className="luz-disco absolute w-[30vw] h-[30vw] max-w-[400px] max-h-[400px] rounded-full blur-[100px]"
+            className="luz-disco absolute w-[30vw] h-[30vw] max-w-[400px] max-h-[400px] rounded-full blur-[140px]"
             style={{
               backgroundColor: color,
               left: '50%',
               top: '50%',
-              opacity: 0.4,
+              opacity: 0.15,
               transform: 'translate(-50%, -50%)',
               willChange: 'transform, opacity, background-color',
             }}
@@ -239,9 +236,9 @@ export default function HeroSection() {
         ))}
       </div>
 
-      {/* Luces de Ambiente fijas */}
-      <div className="absolute top-1/4 left-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-br from-purple-900/40 to-pink-600/15 blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-10 right-[-10%] w-[60vw] h-[60vw] rounded-full bg-cyan-900/25 blur-[160px] pointer-events-none" />
+      {/* Luces de Ambiente fijas suaves */}
+      <div className="absolute top-1/4 left-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-br from-purple-900/20 to-pink-600/10 blur-[180px] pointer-events-none" />
+      <div className="absolute bottom-10 right-[-10%] w-[60vw] h-[60vw] rounded-full bg-cyan-900/15 blur-[180px] pointer-events-none" />
 
       {/* Hojas */}
       <div className="anim-hoja-izquierda absolute top-6 left-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-top-left z-10">
@@ -288,49 +285,49 @@ export default function HeroSection() {
         </p>
 
         {/* Tarjetas */}
-        <div className="anim-contenedor-tarjetas mt-4 flex items-center justify-center gap-0 pointer-events-none drop-shadow-[0_15px_40px_rgba(31,22,69,0.6)]">
+        <div className="anim-contenedor-tarjetas mt-4 flex items-center justify-center gap-0 pointer-events-none drop-shadow-[0_10px_25px_rgba(0,0,0,0.5)]">
           
-          <div className="anim-tarjeta relative w-28 h-36 sm:w-40 sm:h-52 md:w-52 md:h-64 border-2 border-cyan-400 bg-[#0f0b21]/95 rounded-l-3xl overflow-hidden shadow-[0_0_30px_rgba(34,211,238,0.5)] tarjeta-shadow-cyan z-10">
-            <Image src="/abt1.png" alt="Evento 1" fill className="object-cover" priority />
+          <div className="anim-tarjeta relative w-28 h-36 sm:w-40 sm:h-52 md:w-52 md:h-64 border border-cyan-400/80 bg-[#0f0b21]/95 rounded-l-3xl overflow-hidden tarjeta-shadow-cyan z-10">
+            <Image src="/lasvegas-14.jpg" alt="Evento 1" fill className="object-cover" priority />
           </div>
 
-          <div className="anim-tarjeta relative w-32 h-40 sm:w-44 sm:h-56 md:w-56 md:h-68 border-2 border-[#ff3ea5] bg-[#0f0b21]/95 rounded-xl overflow-hidden shadow-[0_0_35px_rgba(255,62,165,0.6)] tarjeta-shadow-fucsia z-20 -mx-2 sm:-mx-4">
+          <div className="anim-tarjeta relative w-32 h-40 sm:w-44 sm:h-56 md:w-56 md:h-68 border border-[#ff3ea5]/80 bg-[#0f0b21]/95 rounded-xl overflow-hidden tarjeta-shadow-fucsia z-20 -mx-2 sm:-mx-4">
             <Image src="/abt2.png" alt="Evento 2" fill className="object-cover" priority />
           </div>
 
-          <div className="anim-tarjeta relative w-28 h-36 sm:w-40 sm:h-52 md:w-52 md:h-64 border-2 border-[#9b5de5] bg-[#0f0b21]/95 rounded-r-3xl overflow-hidden shadow-[0_0_30px_rgba(155,93,229,0.5)] tarjeta-shadow-violeta z-10">
+          <div className="anim-tarjeta relative w-28 h-36 sm:w-40 sm:h-52 md:w-52 md:h-64 border border-[#9b5de5]/80 bg-[#0f0b21]/95 rounded-r-3xl overflow-hidden tarjeta-shadow-violeta z-10">
             <Image src="/drin1.png" alt="Evento 3" fill className="object-cover" priority />
           </div>
 
         </div>
 
-        {/* ✅ Bloque Interactivos - CON PADDING CORRECTO */}
+        {/* Bloque Interactivos */}
         <div className="relative w-full max-w-md mx-auto mt-6">
           
           {/* Copa Flotante */}
-          <div className="anim-copa-derecha absolute -right-12 sm:-right-16 top-3 w-14 h-14 sm:w-20 sm:h-20 pointer-events-none drop-shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+          <div className="anim-copa-derecha absolute -right-12 sm:-right-16 top-3 w-14 h-14 sm:w-20 sm:h-20 pointer-events-none drop-shadow-[0_0_15px_rgba(34,211,238,0.25)]">
             <Image src="/drink2.png" alt="Cóctel Pequeño" fill className="object-contain" />
           </div>
 
-          {/* ✅ BOTONES CON PADDING CORRECTO - TEXTOS ALINEADOS A LA IZQUIERDA */}
+          {/* BOTONES */}
           <div className="flex flex-col gap-2 sm:gap-3 w-full">
             <Link 
               href="/juegos" 
-              className="anim-boton block w-full py-3 sm:py-4 rounded-2xl font-space font-bold text-white text-sm sm:text-base tracking-wide bg-gradient-to-r from-[#ff3ea5] to-[#9b5de5] shadow-[0_0_30px_rgba(255,62,165,0.5)] hover:shadow-[0_0_50px_rgba(255,62,165,0.8)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-left px-6"
+              className="anim-boton block w-full py-3 sm:py-4 rounded-2xl font-space font-bold text-white text-sm sm:text-base tracking-wide bg-gradient-to-r from-[#ff3ea5] to-[#9b5de5] shadow-[0_0_20px_rgba(255,62,165,0.3)] hover:shadow-[0_0_30px_rgba(255,62,165,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-left px-6"
             >
               🎮 Entrar a los Juegos
             </Link>
 
             <Link 
               href="/tu-cancion" 
-              className="anim-boton block w-full py-3 sm:py-4 rounded-2xl font-space font-medium text-gray-300 text-sm sm:text-base tracking-wide bg-[#0f0b21]/90 border border-[#2b1b4b] hover:border-cyan-500 hover:text-white hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 text-left px-6"
+              className="anim-boton block w-full py-3 sm:py-4 rounded-2xl font-space font-medium text-gray-300 text-sm sm:text-base tracking-wide bg-[#0f0b21]/90 border border-[#2b1b4b] hover:border-cyan-500/80 hover:text-white hover:shadow-[0_0_15px_rgba(34,211,238,0.25)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 text-left px-6"
             >
               🎵 Pedir una Canción
             </Link>
 
             <Link 
               href="/nosotros" 
-              className="anim-boton block w-full py-3 sm:py-4 rounded-2xl font-space font-medium text-gray-300 text-sm sm:text-base tracking-wide bg-[#0f0b21]/90 border border-[#2b1b4b] hover:border-cyan-500 hover:text-white hover:shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 text-left px-6"
+              className="anim-boton block w-full py-3 sm:py-4 rounded-2xl font-space font-medium text-gray-300 text-sm sm:text-base tracking-wide bg-[#0f0b21]/90 border border-[#2b1b4b] hover:border-cyan-500/80 hover:text-white hover:shadow-[0_0_15px_rgba(34,211,238,0.25)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 text-left px-6"
             >
               ℹ️ Sobre Nosotros
             </Link>

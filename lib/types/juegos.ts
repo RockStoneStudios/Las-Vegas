@@ -32,6 +32,7 @@ export interface EstadoJuego {
   juegoActivo: JuegoId | null;
   tipo: TipoJuego | null;
   mesaObjetivo: number | null;
+  activo?: boolean; // 👈 Añadido para habilitar el indicador de estado
   datos: Record<string, unknown>;
 }
 
@@ -39,5 +40,6 @@ export const ESTADO_INICIAL: EstadoJuego = {
   juegoActivo: null,
   tipo: null,
   mesaObjetivo: null,
+  activo: false, // 👈 Estado inicial desactivado
   datos: {},
 };

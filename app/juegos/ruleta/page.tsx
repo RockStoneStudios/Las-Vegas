@@ -1,85 +1,130 @@
-// app/ruleta/page.tsx (o la ruta correspondiente a tu vista)
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useRuletaSimulada } from '@/lib/hooks/useRuletaSimulada';
 import RuedaRuleta from '@/app/components/juegos/RuedaRuleta';
-import { RotateCcw, Dices } from 'lucide-react';
+import { RotateCcw, Dices, PartyPopper, Frown } from 'lucide-react';
+import gsap from 'gsap';
 
 export default function RuletaPage() {
   const { segmentos, rotacion, girando, premioGanado, girar, reiniciarRuleta } =
     useRuletaSimulada();
 
-  // Guardamos la referencia del icono si hay un premio ganado
+  const letraLRef = useRef<HTMLSpanElement>(null);
   const IconoPremio = premioGanado?.icono;
 
+  // ⚡ CORTOCIRCUITO ELÉCTRICO REAL Y CAÓTICO CON GSAP
+  useEffect(() => {
+    const el = letraLRef.current;
+    if (!el) return;
+
+    // Función recursiva que genera destellos y apagones con tiempos e intensidades aleatorias
+    let timeoutId: NodeJS.Timeout;
+
+    const generarChispa = () => {
+      const tl = gsap.timeline({
+        onComplete: () => {
+          // Espera un tiempo aleatorio entre cortocircuitos (entre 0.3s y 2.5s)
+          const tiempoSiguienteFalla = Math.random() * 2200 + 300;
+          timeoutId = setTimeout(generarChispa, tiempoSiguienteFalla);
+        },
+      });
+
+      // Ráfaga caótica de micro-apagones y chispazos (0.01s a 0.04s)
+      tl.to(el, { opacity: 0, filter: 'none', color: '#111', duration: 0.02 })
+        .to(el, { opacity: 1, filter: 'drop-shadow(0 0 18px #ff0055) drop-shadow(0 0 5px #fff)', color: '#ffffff', duration: 0.01 })
+        .to(el, { opacity: 0.1, filter: 'none', color: '#ff0055', duration: 0.03 })
+        .to(el, { opacity: 1, filter: 'drop-shadow(0 0 25px #00f3ff) drop-shadow(0 0 8px #00f3ff)', color: '#00f3ff', duration: 0.02 })
+        .to(el, { opacity: 0, filter: 'none', duration: 0.04 })
+        .to(el, { opacity: 1, filter: 'drop-shadow(0 0 15px #ffee00) drop-shadow(0 0 4px #fff)', color: '#ffee00', duration: 0.01 })
+        .to(el, { opacity: 0.2, filter: 'none', color: '#00f3ff', duration: 0.02 })
+        .to(el, { opacity: 1, filter: 'drop-shadow(0 0 20px #00f3ff) drop-shadow(0 0 10px #00f3ff)', color: '#00f3ff', duration: 0.08 });
+    };
+
+    generarChispa();
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
   return (
-    <div className="px-5 pt-28 pb-16 md:px-10 min-h-screen max-w-4xl mx-auto flex flex-col items-center select-none">
-      <h1 className="font-mono text-3xl md:text-5xl font-black text-white text-center mb-3 uppercase tracking-widest drop-shadow-[0_0_12px_#00f3ff]">
-        🎡 La Ruleta Global
-      </h1>
+    <div className="px-4 pt-20 pb-12 md:px-8 min-h-screen max-w-3xl mx-auto flex flex-col items-center select-none">
+      
+      {/* 🎡 HEADER CON CORTOCIRCUITO REAL EN LA 'L' */}
+      <header className="text-center mb-6">
+        <h1 className="font-mono text-2xl md:text-4xl font-black text-white uppercase tracking-widest drop-shadow-[0_0_15px_rgba(0,243,255,0.6)] flex items-center justify-center gap-1">
+          <span>🎡 LA RULETA GLOBA</span>
+          <span 
+            ref={letraLRef} 
+            className="text-[#00f3ff] inline-block font-black ml-0.5 min-w-[0.6em]"
+          >
+            L
+          </span>
+        </h1>
+        <p className="mt-1.5 font-mono text-xs md:text-sm tracking-wider uppercase text-gray-400">
+          {girando ? '🎲 ¡Suerte! Girando...' : premioGanado ? '¡Revisa tu premio!' : 'Presiona girar para participar'}
+        </p>
+      </header>
 
-      <p className="text-center font-mono text-xs md:text-sm tracking-widest uppercase mb-10 text-gray-400">
-        {girando ? '🎲 Girando...' : premioGanado ? '¡Mira tu resultado!' : 'Presiona girar 👇'}
-      </p>
+      {/* RUEDA DE LA RULETA */}
+      <div className="relative flex justify-center items-center my-2">
+        <RuedaRuleta
+          segmentos={segmentos}
+          rotacion={rotacion}
+          girando={girando}
+          indiceGanador={premioGanado ? segmentos.findIndex(s => s.id === premioGanado.id) : null}
+        />
+      </div>
 
-      <RuedaRuleta
-        segmentos={segmentos}
-        rotacion={rotacion}
-        girando={girando}
-        indiceGanador={premioGanado ? segmentos.findIndex(s => s.id === premioGanado.id) : null}
-      />
-
-      {/* Botón Principal de Girar */}
+      {/* BOTÓN PRINCIPAL */}
       <button
         onClick={girar}
         disabled={girando}
-        className={`mt-10 font-mono font-black text-sm md:text-base tracking-widest uppercase px-10 py-3 rounded-xl border-2 transition-all duration-300 flex items-center gap-2 ${
+        className={`mt-6 font-mono font-black text-sm md:text-base tracking-widest uppercase px-8 py-3.5 rounded-2xl border-2 transition-all duration-300 flex items-center gap-2.5 ${
           girando
-            ? 'border-gray-800 text-gray-600 bg-[#060413]/40 cursor-not-allowed'
-            : 'border-[#00f3ff] text-[#00f3ff] bg-[#00f3ff]/10 hover:bg-[#00f3ff]/20 hover:scale-105 shadow-[0_0_20px_rgba(0,243,255,0.4)]'
+            ? 'border-gray-800 text-gray-600 bg-[#060413]/50 cursor-not-allowed scale-95'
+            : 'border-[#00f3ff] text-[#00f3ff] bg-[#00f3ff]/10 hover:bg-[#00f3ff]/25 hover:scale-105 active:scale-95 shadow-[0_0_25px_rgba(0,243,255,0.35)]'
         }`}
       >
         <Dices className={`w-5 h-5 ${girando ? 'animate-spin' : ''}`} />
         {girando ? 'Girando...' : 'Girar la ruleta'}
       </button>
 
-      {/* Banner de Resultado */}
+      {/* BANNER DE RESULTADO */}
       {premioGanado && !girando && (
         <div
-          className={`mt-8 w-full max-w-sm rounded-2xl border-2 p-6 text-center animate-pulse flex flex-col items-center transition-all ${
+          className={`mt-6 w-full max-w-sm rounded-2xl border-2 p-5 text-center flex flex-col items-center backdrop-blur-md transition-all duration-500 animate-in fade-in slide-in-from-bottom-4 ${
             premioGanado.esGanador
-              ? 'border-[#ffd700] bg-[#ffd700]/10 shadow-[0_0_30px_rgba(255,215,0,0.4)]'
-              : 'border-[#ff007f]/60 bg-[#ff007f]/10 shadow-[0_0_20px_rgba(255,0,127,0.3)]'
+              ? 'border-[#ffd700] bg-[#ffd700]/10 shadow-[0_0_30px_rgba(255,215,0,0.35)] text-[#ffd700]'
+              : 'border-[#ff007f]/70 bg-[#ff007f]/10 shadow-[0_0_25px_rgba(255,0,127,0.3)] text-[#ff007f]'
           }`}
         >
-          {/* Renderizado dinámico del icono de Lucide */}
-          {IconoPremio && (
-            <IconoPremio
-              className={`w-12 h-12 mb-3 ${
-                premioGanado.esGanador
-                  ? 'text-[#ffd700] filter drop-shadow-[0_0_12px_#ffd700]'
-                  : 'text-[#ff007f] filter drop-shadow-[0_0_8px_#ff007f]'
-              }`}
-            />
+          {IconoPremio ? (
+            <IconoPremio className="w-10 h-10 mb-2 filter drop-shadow-[0_0_10px_currentColor]" />
+          ) : premioGanado.esGanador ? (
+            <PartyPopper className="w-10 h-10 mb-2 filter drop-shadow-[0_0_10px_currentColor]" />
+          ) : (
+            <Frown className="w-10 h-10 mb-2 filter drop-shadow-[0_0_10px_currentColor]" />
           )}
 
-          <p className="font-mono font-black text-lg text-white uppercase tracking-wider">
-            {premioGanado.esGanador ? '¡Ganaste!' : 'Casi...'}
+          <p className="font-mono font-black text-base md:text-lg uppercase tracking-widest text-white">
+            {premioGanado.esGanador ? '¡Felicidades, Ganaste!' : 'Sigue intentando'}
           </p>
-          <p className="font-mono text-sm text-gray-300 mt-1 uppercase font-bold">
+          <p className="font-mono text-xs md:text-sm text-gray-200 mt-1 uppercase font-bold tracking-wide">
             {premioGanado.texto}
           </p>
         </div>
       )}
 
-      {/* Botón de Reiniciar */}
+      {/* BOTÓN REINICIAR */}
       <button
         onClick={reiniciarRuleta}
         disabled={girando}
-        className="mt-6 font-mono text-xs tracking-widest uppercase text-gray-500 hover:text-[#ff007f] transition-colors disabled:opacity-30 flex items-center gap-1.5"
+        className="mt-6 font-mono text-[11px] tracking-widest uppercase text-gray-500 hover:text-[#ff007f] transition-colors disabled:opacity-30 flex items-center gap-1.5"
       >
         <RotateCcw className="w-3.5 h-3.5" />
-        Reordenar premios (simulación)
+        Reordenar premios
       </button>
     </div>
   );

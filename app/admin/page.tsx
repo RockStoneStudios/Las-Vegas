@@ -1,94 +1,65 @@
 'use client';
 
-import { useState } from 'react';
-import confetti from 'canvas-confetti';
-import RuletaMesas from '../components/RuletasMesa';
+import Link from 'next/link';
+import { useMesa } from '@/lib/context/MesaContext';
+import { useSimulacionJuego } from '@/lib/context/PanelControlContext';
+import PanelSimulacionAdmin from '@/app/components/juegos/PanelSimulacionAdmin';
 
 export default function PaginaAdmin() {
-  const [numMesas, setNumMesas] = useState(16);
-  const [ruletaGenerada, setRuletaGenerada] = useState(false);
-
-  // 💥 Función ajustada para forzar el confeti en primer plano
-  const lanzarConfeti = () => {
-    // Ráfaga izquierda
-    confetti({
-      particleCount: 100,
-      spread: 80,
-      origin: { x: 0.15, y: 0.6 },
-      zIndex: 9999, // 👈 Evita que el fondo o tarjetas tapen el confeti
-      colors: ['#ff00a0', '#2ee6d6', '#ffd700', '#9b5de5'],
-    });
-
-    // Ráfaga derecha
-    confetti({
-      particleCount: 100,
-      spread: 80,
-      origin: { x: 0.85, y: 0.6 },
-      zIndex: 9999,
-      colors: ['#ff00a0', '#2ee6d6', '#ffd700', '#9b5de5'],
-    });
-  };
+  const { numeroMesa, setNumeroMesa } = useMesa();
+  const { estado, activarJuego, desactivarJuego } = useSimulacionJuego();
 
   return (
-    <main className="relative min-h-screen pt-28 pb-12 px-4 sm:px-6 lg:px-8 bg-[#020106] flex flex-col items-center gap-8 select-none">
-      {/* Capa de fondo con degradado Neo-Punk */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#060413] via-[#020106] to-[#0a071d] z-0" />
-      
-      {/* Título Principal */}
-      <h1 className="relative z-10 font-orbitron font-black text-2xl sm:text-4xl uppercase tracking-[0.2em] text-white text-center drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] leading-none">
-        ZONA DE JUEGO: <br className="sm:hidden" />
-        <span className="text-[#2ee6d6] drop-shadow-[0_0_12px_#2ee6d6,0_0_30px_#2ee6d6] animate-pulse ml-2 sm:ml-0">
-          PRUEBA TU SUERTE
-        </span>
-      </h1>
+    <main className="relative min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-[#020106] flex flex-col items-center gap-8 select-none">
+      {/* Capa de fondo Neo-Punk */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-[#060413] via-[#020106] to-[#0a071d] z-0 pointer-events-none" />
 
-      {!ruletaGenerada && (
-        <div className="relative z-10 flex flex-col gap-6 items-center w-full max-w-md bg-[#060413]/60 backdrop-blur-md border border-[#1f1645] p-8 rounded-2xl shadow-[0_0_25px_rgba(31,22,69,0.4)] hover:border-purple-500/30 transition-all duration-300">
-          
-          {/* Campo de Entrada de Datos */}
-          <label className="font-space font-medium text-sm sm:text-base text-gray-300 flex flex-col sm:flex-row items-center gap-3 w-full justify-between">
-            <span className="uppercase tracking-wider text-xs font-bold text-purple-400">
-              🎰 ¿Cuántas mesas juegan?
-            </span>
-            <input
-              type="number"
-              min={2}
-              max={50}
-              value={numMesas}
-              onChange={(e) => setNumMesas(Number(e.target.value))}
-              className="w-full sm:w-24 px-3 py-2 bg-[#0c0824] border border-[#1f1645] rounded-xl font-orbitron font-bold text-center text-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.1)] focus:outline-none focus:border-cyan-400 focus:shadow-[0_0_15px_rgba(34,211,238,0.4)] transition-all duration-200"
-            />
-          </label>
+      {/* Encabezado */}
+      <div className="relative z-10 text-center max-w-3xl">
+        <h1 className="font-orbitron font-black text-2xl sm:text-4xl uppercase tracking-[0.2em] text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+          CABINA DE CONTROL <span className="text-[#ff00a0]">DJ / ADMIN</span>
+        </h1>
+        <p className="font-space text-slate-300 text-xs sm:text-sm mt-2 font-bold tracking-wider">
+          Activa eventos en tiempo real para las mesas y gestiona los juegos.
+        </p>
+      </div>
 
-          {/* Botón Principal Generar */}
-          <button
-            onClick={() => setRuletaGenerada(true)}
-            className="w-full py-3.5 rounded-xl bg-[#ff00a0] font-orbitron font-black text-xs sm:text-sm tracking-widest text-white uppercase shadow-[0_0_20px_rgba(255,0,160,0.6)] hover:shadow-[0_0_35px_rgba(255,0,160,0.9)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
-          >
-            🔥 ENCIENDE LA RULETA
-          </button>
+      <div className="relative z-10 w-full max-w-5xl flex flex-col gap-8">
+        
+        {/* PANEL DE CONTROL DE JUEGOS EN VIVO */}
+        <div className="flex justify-center w-full">
+          <PanelSimulacionAdmin
+            numeroMesa={numeroMesa}
+            setNumeroMesa={setNumeroMesa}
+            onActivar={activarJuego}
+            onDesactivar={desactivarJuego}
+            juegoActivo={estado.juegoActivo}
+          />
         </div>
-      )}
 
-      {ruletaGenerada && (
-        <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-5xl">
-          {/* Componente de la Ruleta */}
-          <div className="w-full p-6 bg-[#060413]/40 backdrop-blur-sm border border-[#1f1645] rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-            <RuletaMesas 
-              numMesas={numMesas} 
-              onResultado={() => lanzarConfeti()} 
-            />
-          </div>
-
-          {/* Botón Volver / Reset */}
-          <button
-            onClick={() => setRuletaGenerada(false)}
-            className="px-5 py-2.5 rounded-lg border border-gray-600 bg-transparent font-orbitron font-bold text-xs tracking-wider text-gray-400 uppercase hover:border-white hover:text-white hover:shadow-[0_0_12px_rgba(255,255,255,0.4)] active:scale-95 transition-all duration-200"
+        {/* ACCESO ÚNICO A JUEGOS */}
+        <div className="flex justify-center w-full">
+          <Link
+            href="/juegos"
+            className="group relative w-full max-w-md p-[2px] rounded-xl overflow-hidden transition-all duration-300 hover:scale-[1.02]"
           >
-            ← CAMBIAR NÚMERO DE MESAS
-          </button>
+            <div className="absolute inset-0 bg-[conic-gradient(from_0deg,#00f3ff,transparent,#ff00a0,transparent)] opacity-60 group-hover:opacity-100 transition-all duration-500" />
+            <div className="relative z-10 bg-[#080516] p-6 rounded-[10px] flex flex-col gap-2 items-center text-center h-full">
+              <span className="text-4xl">🎮</span>
+              <h3 className="font-orbitron font-black text-white text-lg tracking-wider uppercase">
+                Ver Juegos
+              </h3>
+              <p className="font-space text-slate-300 text-xs font-semibold">
+                Accede a la sección principal de juegos interactivos y ruletas.
+              </p>
+              <span className="mt-2 text-[#00f3ff] font-orbitron text-xs font-bold uppercase tracking-widest group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                Ver Juegos →
+              </span>
+            </div>
+          </Link>
         </div>
-      )}
+
+      </div>
     </main>
   );
 }

@@ -1,27 +1,19 @@
 'use client';
 
 import { useMesa } from '@/lib/context/MesaContext';
-import { useSimulacionJuego } from '@/lib/context/PanelControlContext'; // 👈 único cambio
+import { useSimulacionJuego } from '@/lib/context/PanelControlContext';
 import { JUEGOS_CONFIG } from '@/lib/types/juegos';
 import TarjetaJuego from '@/app/components/juegos/TargetaJuego';
-import PanelSimulacionAdmin from '@/app/components/juegos/PanelSimulacionAdmin';
 
 export default function JuegosPage() {
-  const { numeroMesa, setNumeroMesa } = useMesa();
-  const { estado, activarJuego, desactivarJuego } = useSimulacionJuego();
+  const { numeroMesa } = useMesa();
+  const { estado } = useSimulacionJuego();
 
-  const hayJuegoActivo = estado.juegoActivo !== null;
+  // El sistema tiene un juego activo si hay un ID asignado Y la bandera activo es true
+  const hayJuegoActivo = Boolean(estado.juegoActivo && estado.activo !== false);
 
   return (
-    <div className="px-5 pt-28 pb-16 md:px-10 min-h-screen max-w-5xl mx-auto">
-      <PanelSimulacionAdmin
-        numeroMesa={numeroMesa}
-        setNumeroMesa={setNumeroMesa}
-        onActivar={activarJuego}
-        onDesactivar={desactivarJuego}
-        juegoActivo={estado.juegoActivo}
-      />
-
+    <div className="px-4 pt-6 pb-10 md:px-10 min-h-screen max-w-6xl mx-auto flex flex-col justify-start">
       <style jsx global>{`
         @keyframes cortocircuito {
           0%, 18%, 22%, 25%, 53%, 57%, 100% {
@@ -38,37 +30,43 @@ export default function JuegosPage() {
         }
       `}</style>
 
-      <h1 className="font-orbitron text-3xl md:text-5xl font-black text-white mb-4 uppercase tracking-[0.2em] animacion-corto">
-        Juegos de la noche
-      </h1>
-
-      <div className="flex justify-center">
-        <p
-          className={`font-space font-bold text-xs md:text-sm tracking-widest uppercase px-6 py-2.5 rounded-xl border backdrop-blur-md transition-all duration-500 ${
+      {/* Encabezado compacto y centrado */}
+      <div className="text-center mb-5 flex flex-col items-center gap-2">
+        {/* Indicador de estado discreto tipo Pill */}
+        <span
+          className={`font-space font-bold text-[10px] md:text-xs tracking-widest uppercase px-4 py-1 rounded-full border backdrop-blur-md transition-all duration-500 ${
             hayJuegoActivo
-              ? 'border-[#2ee6d6] text-[#2ee6d6] bg-[#2ee6d6]/10 shadow-[0_0_20px_rgba(46,230,214,0.25)] animate-pulse'
-              : 'border-[#ff00a0]/30 text-gray-400 bg-[#060413]/60'
+              ? 'border-[#2ee6d6] text-[#2ee6d6] bg-[#2ee6d6]/10 shadow-[0_0_15px_rgba(46,230,214,0.3)] animate-pulse'
+              : 'border-white/10 text-gray-400 bg-black/40'
           }`}
         >
-          {hayJuegoActivo ? (
-            <span>🔥 ¡Hay un juego en vivo! Mira abajo 👇</span>
-          ) : (
-            <span>🚫 Esperando que el DJ active un concurso...</span>
-          )}
-        </p>
+          {hayJuegoActivo ? '🔥 JUEGO EN VIVO DENTRO' : 'STANDBY • ESPERANDO DJ'}
+        </span>
+
+        {/* Título Principal Centrado */}
+        <h1 className="font-orbitron text-2xl sm:text-4xl md:text-5xl font-black text-white uppercase tracking-[0.15em] animacion-corto">
+          Juegos de la noche
+        </h1>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* Grid de Tarjetas */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
         {JUEGOS_CONFIG.map((juego) => {
-          const esElActivo = estado.juegoActivo === juego.id;
+          // 1. Validar si este juego en específico es el que activó el Admin
+          const esElActivo = hayJuegoActivo && estado.juegoActivo === juego.id;
+
+          // 2. Determinar disponibilidad:
+          // - Si es 'global': Disponible para todos en toda la discoteca.
+          // - Si es 'por_mesa': Solo disponible si la mesa de este cliente coincide con la mesa objetivo.
           const esParaMi =
             esElActivo &&
-            (juego.tipo === 'global' || (juego.tipo === 'por_mesa' && estado.mesaObjetivo === numeroMesa));
+            (juego.tipo === 'global' ||
+              (juego.tipo === 'por_mesa' && estado.mesaObjetivo === numeroMesa));
 
           return (
             <TarjetaJuego
               key={juego.id}
-              id={juego.id} 
+              id={juego.id}
               nombre={juego.nombre}
               icono={juego.icono}
               tipo={juego.tipo}
