@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Colores originales
+// Colores del diseño Neo-Punk
 const COLORES_RULETA = ['#ff3ea5', '#1c1030'];
 
 function polarACartesiano(cx: number, cy: number, r: number, anguloGrados: number) {
@@ -41,32 +41,47 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
   const [indiceRuletaGanador, setIndiceRuletaGanador] = useState<number | null>(null);
 
   const rotacionAcumulada = useRef(0);
-  const intervaloMosaicoRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutMosaicoRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRuletaRef = useRef<NodeJS.Timeout | null>(null);
 
   // Dimensiones del SVG
   const cx = 300, cy = 300;
   const r = 290; 
   const radioTexto = r * 0.85; 
 
+  const limpiarTimers = () => {
+    if (timeoutMosaicoRef.current) clearTimeout(timeoutMosaicoRef.current);
+    if (timeoutRuletaRef.current) clearTimeout(timeoutRuletaRef.current);
+  };
+
   useEffect(() => {
-    return () => {
-      if (intervaloMosaicoRef.current) clearInterval(intervaloMosaicoRef.current);
-    };
+    return () => limpiarTimers();
   }, []);
 
   function obtenerAleatorio(min: number, max: number) {
     return Math.random() * (max - min) + min;
   }
 
-  function iniciarSorteo() {
-    if (girando) return;
-    setGirando(true);
+  function reiniciarEstado() {
+    limpiarTimers();
     setGanadora(null);
     setIndiceMosaicoActivo(null);
     setIndiceRuletaGanador(null);
+  }
 
-    // Ajustado estrictamente entre 7 y 11 segundos
-    const segundosAleatorios = obtenerAleatorio(11, 15);
+  function cambiarModo(nuevoModo: ModoVisual) {
+    if (girando) return;
+    reiniciarEstado();
+    setModo(nuevoModo);
+  }
+
+  function iniciarSorteo() {
+    if (girando) return;
+    setGirando(true);
+    reiniciarEstado();
+
+    // Duración entre 7 y 11 segundos
+    const segundosAleatorios = obtenerAleatorio(7, 11);
     setDuracionActual(segundosAleatorios);
     const milisegundosSorteo = segundosAleatorios * 1000;
 
@@ -85,12 +100,15 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
       rotacionAcumulada.current = nuevaRotacion;
       setRotacion(nuevaRotacion);
 
-      setTimeout(() => {
+      timeoutRuletaRef.current = setTimeout(() => {
         const mesaGanadora = segmentosRuleta[indiceGanador];
         setGirando(false);
         setGanadora(mesaGanadora);
         setIndiceRuletaGanador(indiceGanador);
-        if (onResultado) onResultado(mesaGanadora);
+
+        if (onResultado) {
+          onResultado(mesaGanadora);
+        }
       }, milisegundosSorteo);
 
     } else {
@@ -117,17 +135,20 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
         }
 
         if (tiempoAcumulado < milisegundosSorteo) {
-          intervaloMosaicoRef.current = setTimeout(animarMosaico, tiempoPaso);
+          timeoutMosaicoRef.current = setTimeout(animarMosaico, tiempoPaso);
         } else {
           setIndiceMosaicoActivo(indiceFinalMosaico);
           const mesaGanadora = listaMesasMosaico[indiceFinalMosaico];
           setGirando(false);
           setGanadora(mesaGanadora);
-          if (onResultado) onResultado(mesaGanadora);
+
+          if (onResultado) {
+            onResultado(mesaGanadora);
+          }
         }
       };
 
-      intervaloMosaicoRef.current = setTimeout(animarMosaico, tiempoPaso);
+      timeoutMosaicoRef.current = setTimeout(animarMosaico, tiempoPaso);
     }
   }
 
@@ -138,7 +159,7 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
       <div className="flex bg-[#0d0720] rounded-full p-1 border border-[#331b58] shadow-[0_0_15px_rgba(155,93,229,0.15)]">
         <button
           disabled={girando}
-          onClick={() => { setModo('ruleta'); setGanadora(null); setIndiceMosaicoActivo(null); setIndiceRuletaGanador(null); }}
+          onClick={() => cambiarModo('ruleta')}
           className={`px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 disabled:cursor-not-allowed text-white ${
             modo === 'ruleta' 
               ? 'bg-gradient-to-r from-[#ff3ea5] to-[#9b5de5] shadow-[0_0_8px_rgba(255,255,255,0.5)]' 
@@ -149,7 +170,7 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
         </button>
         <button
           disabled={girando}
-          onClick={() => { setModo('mosaico'); setGanadora(null); setIndiceMosaicoActivo(null); setIndiceRuletaGanador(null); }}
+          onClick={() => cambiarModo('mosaico')}
           className={`px-6 py-2 rounded-full font-bold text-sm transition-all duration-300 disabled:cursor-not-allowed text-white ${
             modo === 'mosaico' 
               ? 'bg-gradient-to-r from-[#ff3ea5] to-[#9b5de5] shadow-[0_0_8px_rgba(255,255,255,0.5)]' 
@@ -160,14 +181,12 @@ export default function RuletaMesas({ numMesas, onResultado }: RuletaMesasProps)
         </button>
       </div>
 
-      {/* Contenedor Fijo Grande */}
-     {/* </div> <div className="relative w-full max-w-[550px] 2xl:max-w-[800px] tv:max-w-[85vh] aspect-square flex items-center justify-center"> */}
-      <div className="relative w-full max-w-137.5 aspect-square flex items-center justify-center">
+      {/* Contenedor Fijo de la Ruleta / Mosaico */}
+      <div className="relative w-full max-w-[550px] aspect-square flex items-center justify-center">
         {modo === 'ruleta' ? (
           <>
-            {/* Indicador de aguja superior (Usando color cian plano de Tailwind) */}
-            {/* <div className="absolute -top-4 2xl:-top-6 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[16px] 2xl:border-l-[24px] border-l-transparent border-r-[16px] 2xl:border-r-[24px] border-r-transparent border-t-[32px] 2xl:border-t-[48px] border-t-cyan-400 z-10 drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]" /> */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-0 height-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[32px] border-t-cyan-400 z-10 drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
+            {/* Indicador de aguja superior */}
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[32px] border-t-cyan-400 z-10 drop-shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
             
             <svg
               width="100%" 

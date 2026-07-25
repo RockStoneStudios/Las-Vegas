@@ -21,4 +21,8 @@ export const SEGMENTOS_BASE: Omit<SegmentoRuleta, 'id'>[] = [
   { texto: 'Ronda de cerveza', icono: Beer, esGanador: true, color: '#ffee00' },
   { texto: 'No ganaste', icono: Skull, esGanador: false, color: '#2a1b4e' },
   { texto: 'No ganaste', icono: Skull, esGanador: false, color: '#130d24' },
+   { texto: 'Una media', icono: Skull, esGanador: true, color: '#13ac01' },
+     { texto: 'Un Shot', icono: Skull, esGanador: true, color: '#c3cd14' },
+       { texto: '10% en la cuenta', icono: Skull, esGanador: false, color: '#13cc24' },
+  
 ];
