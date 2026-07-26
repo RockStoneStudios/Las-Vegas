@@ -10,6 +10,8 @@ const COLORES_LUCES = ['#22d3ee', '#ff3ea5', '#9b5de5', '#fbbf24', '#34d399', '#
 
 export default function HeroSection() {
   const contenedorHero = useRef<HTMLDivElement>(null);
+  const contenedorParticulasIzq = useRef<HTMLDivElement>(null);
+  const contenedorParticulasDer = useRef<HTMLDivElement>(null);
 
   useGSAP(() => {
     // 1. ANIMACIONES DE ENTRADA
@@ -30,9 +32,7 @@ export default function HeroSection() {
       .from('.anim-copa-derecha', { opacity: 0, x: 30, duration: 1 }, '-=1')
       .from('.anim-lema-neon', { opacity: 0, y: 15, duration: 0.8 }, '-=0.5');
 
-    // 2. ANIMACIONES INFINITAS
-
-    // A. Neón suave parpadeante para "Bar"
+    // 2. ANIMACIONES INFINITAS DE NEÓN DE TEXTO
     gsap.to('.anim-bar', {
       keyframes: {
         '0%': { opacity: 1, textShadow: '0 0 4px #fff, 0 0 12px #fff' },
@@ -62,7 +62,6 @@ export default function HeroSection() {
       }
     });
 
-    // B. Neón tenue para "Sopetrán"
     gsap.to('.anim-sopetran', {
       keyframes: {
         '0%': { opacity: 1, textShadow: '0 0 4px #ff3ea5, 0 0 12px #9b5de5' },
@@ -89,17 +88,14 @@ export default function HeroSection() {
       }
     });
 
-    // FUNCIÓN: CHISPAS BLANCAS QUE CAEN
     function crearChispaBlanca() {
       const contenedorBar = document.querySelector('.contenedor-bar');
       if (!contenedorBar) return;
-
       const chispa = document.createElement('span');
       chispa.className = 'absolute w-[2px] h-[6px] sm:w-[3px] h-[8px] bg-white rounded-full pointer-events-none z-50';
       chispa.style.boxShadow = '0 0 4px #fff';
       chispa.style.left = `${Math.random() * 100}%`;
       chispa.style.top = '80%';
-
       contenedorBar.appendChild(chispa);
 
       gsap.to(chispa, {
@@ -114,17 +110,14 @@ export default function HeroSection() {
       });
     }
 
-    // FUNCIÓN: CHISPAS VIOLETAS
     function crearChispaVioleta() {
       const contenedorSopetran = document.querySelector('.contenedor-sopetran');
       if (!contenedorSopetran) return;
-
       const chispa = document.createElement('span');
       chispa.className = 'absolute w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-white pointer-events-none z-50';
       chispa.style.boxShadow = '0 0 5px #ff3ea5';
       chispa.style.left = `${Math.random() * 100}%`;
       chispa.style.top = `${Math.random() * 100}%`;
-
       contenedorSopetran.appendChild(chispa);
 
       gsap.to(chispa, {
@@ -138,28 +131,25 @@ export default function HeroSection() {
       });
     }
 
-    // Flotación estética
+    // 3. FLOTACIÓN DE ELEMENTOS
     gsap.to('.anim-contenedor-tarjetas', { y: 12, duration: 2.8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
     gsap.to('.anim-copa-derecha', { y: -8, duration: 2.2, repeat: -1, yoyo: true, ease: 'sine.inOut' });
-    
-    // Hojas
     gsap.to('.anim-hoja-izquierda', { rotate: 8, x: 5, y: 5, duration: 4, repeat: -1, yoyo: true, ease: 'sine.inOut' });
     gsap.to('.anim-hoja-derecha', { rotate: -8, x: -5, y: 4, duration: 3.5, repeat: -1, yoyo: true, ease: 'sine.inOut' });
     gsap.to('.anim-hoja-inf-izq', { rotate: 1, x: 1, y: 1, duration: 8, repeat: -1, yoyo: true, ease: 'sine.inOut' });
     gsap.to('.anim-hoja-inf-der', { rotate: -1, x: -1, y: 1, duration: 9, repeat: -1, yoyo: true, ease: 'sine.inOut' });
 
-    // ✅ LUCES DE DISCOTECA - MOVIMIENTO ATENUADO
+    // 4. LUCES DE DISCO DE FONDO
     function moverLuz(el: Element) {
       gsap.to(el, {
         x: gsap.utils.random(-window.innerWidth * 0.4, window.innerWidth * 0.4),
         y: gsap.utils.random(-window.innerHeight * 0.4, window.innerHeight * 0.4),
         scale: gsap.utils.random(0.8, 1.6),
-        opacity: gsap.utils.random(0.08, 0.22), // Reducido notablemente para no encandilar
+        opacity: gsap.utils.random(0.08, 0.22),
         duration: gsap.utils.random(5, 10),
         ease: 'sine.inOut',
         onComplete: () => moverLuz(el),
       });
-      
       gsap.to(el, {
         backgroundColor: COLORES_LUCES[Math.floor(Math.random() * COLORES_LUCES.length)],
         duration: gsap.utils.random(4, 8),
@@ -167,7 +157,6 @@ export default function HeroSection() {
       });
     }
 
-    // Iniciar movimiento de luces
     const luces = gsap.utils.toArray('.luz-disco');
     luces.forEach((luz, i) => {
       gsap.set(luz as Element, {
@@ -176,9 +165,59 @@ export default function HeroSection() {
         scale: gsap.utils.random(0.8, 1.3),
         opacity: gsap.utils.random(0.08, 0.18),
       });
-      
       gsap.delayedCall(i * 0.5, () => moverLuz(luz as Element));
     });
+
+    // 5. ⚡ CHISPAS DE CORTOCIRCUITO ELÉCTRICO NEÓN (SOLO PUNTOS MULTICOLOR)
+// ⚡ PUNTOS NEÓN ELÉCTRICOS (Sutiles, 100% redondos, sin movimiento que los alargue)
+const generarPuntoElectrico = (contenedor: HTMLDivElement | null) => {
+  if (!contenedor) return;
+
+  // Creamos un único punto redondo
+  const p = document.createElement('div');
+  const color = COLORES_LUCES[Math.floor(Math.random() * COLORES_LUCES.length)];
+  
+  // 1. TAMAÑO DEL PUNTO: Aquí defines el diámetro exacto (ej. 4px a 8px)
+  const tamaño = gsap.utils.random(4, 8); 
+
+  p.style.position = 'absolute';
+  p.style.width = `${tamaño}px`;
+  p.style.height = `${tamaño}px`;
+  p.style.borderRadius = '50%'; // Garantiza forma esférica perfecta
+  p.style.backgroundColor = '#ffffff'; // Centro incandescente blanco
+  p.style.boxShadow = `0 0 6px #fff, 0 0 12px ${color}`;
+  p.style.left = `${gsap.utils.random(10, 90)}%`;
+  p.style.top = `${gsap.utils.random(15, 85)}%`;
+  p.style.pointerEvents = 'none';
+
+  contenedor.appendChild(p);
+
+  // 2. ANIMACIÓN SIN ARRASTRE: El punto solo aparece, parpadea en su sitio y desaparece
+  gsap.fromTo(p, 
+    { 
+      opacity: 0, 
+      scale: 0 
+    }, 
+    {
+      opacity: 1,
+      scale: 1.2,
+      duration: 0.15, // Aparición rápida tipo chispazo eléctrico
+      yoyo: true,
+      repeat: 3, // Parpadea 3 veces en el mismo punto exacto
+      ease: 'steps(2)', // Corte seco eléctrico, cero suavizado que estire el punto
+      onComplete: () => p.remove()
+    }
+  );
+};
+
+// 3. CANTIDAD REDUCIDA: Intervalo más alto (800ms) para que aparezcan pocos puntos y no sea cargado
+const intervalIzq = setInterval(() => generarPuntoElectrico(contenedorParticulasIzq.current), 500);
+const intervalDer = setInterval(() => generarPuntoElectrico(contenedorParticulasDer.current), 200);
+
+    return () => {
+      clearInterval(intervalIzq);
+      clearInterval(intervalDer);
+    };
 
   }, { scope: contenedorHero });
 
@@ -206,7 +245,6 @@ export default function HeroSection() {
           animation: letraNeon 3s ease-in-out infinite;
         }
         
-        /* Sombras atenuadas */
         .tarjeta-shadow-cyan {
           box-shadow: 0 0 20px rgba(34, 211, 238, 0.25), 0 0 40px rgba(34, 211, 238, 0.1);
         }
@@ -218,7 +256,17 @@ export default function HeroSection() {
         }
       `}</style>
 
-      {/* ✅ LUCES DE DISCOTECA - MÁS DIFUMINADAS Y SUTILES */}
+      {/* ⚡ FRANZAS LATERALES PARA PUNTOS ELÉCTRICOS EN PANTALLAS GRANDES */}
+      <div 
+        ref={contenedorParticulasIzq} 
+        className="hidden md:block absolute left-0 top-0 w-[24vw] h-full pointer-events-none z-10 overflow-hidden" 
+      />
+      <div 
+        ref={contenedorParticulasDer} 
+        className="hidden md:block absolute right-0 top-0 w-[24vw] h-full pointer-events-none z-10 overflow-hidden" 
+      />
+
+      {/* LUCES DE DISCOTECA DE FONDO */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {COLORES_LUCES.map((color, i) => (
           <div
@@ -236,21 +284,21 @@ export default function HeroSection() {
         ))}
       </div>
 
-      {/* Luces de Ambiente fijas suaves */}
+      {/* Luces de Ambiente fijas */}
       <div className="absolute top-1/4 left-[-10%] w-[55vw] h-[55vw] rounded-full bg-gradient-to-br from-purple-900/20 to-pink-600/10 blur-[180px] pointer-events-none" />
       <div className="absolute bottom-10 right-[-10%] w-[60vw] h-[60vw] rounded-full bg-cyan-900/15 blur-[180px] pointer-events-none" />
 
       {/* Hojas */}
-      <div className="anim-hoja-izquierda absolute top-6 left-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-top-left z-10">
+      <div className="anim-hoja-izquierda absolute top-6 left-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-top-left z-20">
         <Image src="/hoja-leaf.png" alt="Hoja Superior Izquierda" width={160} height={160} className="object-contain" priority />
       </div>
-      <div className="anim-hoja-derecha absolute top-6 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-top-right z-10">
+      <div className="anim-hoja-derecha absolute top-6 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-top-right z-20">
         <Image src="/hoja-right.png" alt="Hoja Superior Derecha" width={160} height={160} className="object-contain" priority />
       </div>
-      <div className="anim-hoja-inf-izq absolute bottom-6 left-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-bottom-left rotate-180 z-10">
+      <div className="anim-hoja-inf-izq absolute bottom-6 left-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-bottom-left rotate-180 z-20">
         <Image src="/hoja-leaf.png" alt="Hoja Inferior Izquierda" width={160} height={160} className="object-contain" priority />
       </div>
-      <div className="anim-hoja-inf-der absolute bottom-6 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-bottom-right rotate-180 z-10">
+      <div className="anim-hoja-inf-der absolute bottom-6 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 pointer-events-none origin-bottom-right rotate-180 z-20">
         <Image src="/hoja-right.png" alt="Hoja Inferior Derecha" width={160} height={160} className="object-contain" priority />
       </div>
 
@@ -292,7 +340,7 @@ export default function HeroSection() {
           </div>
 
           <div className="anim-tarjeta relative w-32 h-40 sm:w-44 sm:h-56 md:w-56 md:h-68 border border-[#ff3ea5]/80 bg-[#0f0b21]/95 rounded-xl overflow-hidden tarjeta-shadow-fucsia z-20 -mx-2 sm:-mx-4">
-            <Image src="/abt2.png" alt="Evento 2" fill className="object-cover" priority />
+            <Image src="/vegast.jpeg" alt="Evento 2" fill className="object-cover" priority />
           </div>
 
           <div className="anim-tarjeta relative w-28 h-36 sm:w-40 sm:h-52 md:w-52 md:h-64 border border-[#9b5de5]/80 bg-[#0f0b21]/95 rounded-r-3xl overflow-hidden tarjeta-shadow-violeta z-10">
