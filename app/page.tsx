@@ -257,14 +257,14 @@ const intervalDer = setInterval(() => generarPuntoElectrico(contenedorParticulas
       `}</style>
 
       {/* ⚡ FRANZAS LATERALES PARA PUNTOS ELÉCTRICOS EN PANTALLAS GRANDES */}
-      <div 
+      {/* <div 
         ref={contenedorParticulasIzq} 
         className="hidden md:block absolute left-0 top-0 w-[24vw] h-full pointer-events-none z-10 overflow-hidden" 
       />
       <div 
         ref={contenedorParticulasDer} 
         className="hidden md:block absolute right-0 top-0 w-[24vw] h-full pointer-events-none z-10 overflow-hidden" 
-      />
+      /> */}
 
       {/* LUCES DE DISCOTECA DE FONDO */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
