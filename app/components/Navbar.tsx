@@ -75,7 +75,7 @@ export default function Navbar() {
             <Link href="/" className="group flex items-center transition-transform duration-300 hover:scale-105">
               <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
                 <Image
-                  src="/lasvesgas-logo.png"
+                  src="/lasvesgas-logo.PNG"
                   alt="Las Vegas Discobar Logo"
                   width={220}
                   height={220}
