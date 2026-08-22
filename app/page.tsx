@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useRef, useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -12,7 +13,7 @@ import { Music, Gamepad2, Martini } from 'lucide-react';
 
 const COLORES_LUCES = ['#22d3ee', '#ff3ea5', '#9b5de5', '#fbbf24', '#34d399', '#f472b6'];
 
-export default function HeroSection() {
+function HeroSectionContent() {
   const contenedorHero = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -455,5 +456,13 @@ export default function HeroSection() {
         </div>
       )}
     </>
+  );
+}
+
+export default function HeroSection() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <HeroSectionContent />
+    </Suspense>
   );
 }

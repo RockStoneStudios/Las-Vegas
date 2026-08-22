@@ -1,12 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, Fragment, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import gsap from 'gsap';
 
-export default function Navbar() {
+function NavbarContent() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [mostrarModalQR, setMostrarModalQR] = useState(false);
   const [mesaActual, setMesaActual] = useState<string | null>(null);
@@ -15,7 +16,7 @@ export default function Navbar() {
   const linksRef = useRef<(HTMLAnchorElement | null)[]>([]);
 
   // Detectar si el usuario está en una mesa por URL o Storage
-    useEffect(() => {
+  useEffect(() => {
     const mesaUrl = searchParams.get('mesa');
     const mesaStorage = localStorage.getItem('mesa_numero');
     const pathname = window.location.pathname;
@@ -33,6 +34,7 @@ export default function Navbar() {
       setMesaActual(null);
     }
   }, [searchParams]);
+
   const enlaces = [
     { 
       nombre: 'Carta', 
@@ -259,5 +261,13 @@ export default function Navbar() {
         </div>
       )}
     </>
+  );
+}
+
+export default function Navbar() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <NavbarContent />
+    </Suspense>
   );
 }

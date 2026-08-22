@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSocketStore } from '@/lib/store/useSocketStore';
@@ -15,7 +16,7 @@ const ICONOS_FINALES: Record<string, React.ElementType> = {
   '7️⃣': CircleDashed,
 };
 
-export default function SlotPage() {
+function SlotPageContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('sessionId');
   const mesa = searchParams.get('mesa');
@@ -337,5 +338,13 @@ export default function SlotPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SlotPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <SlotPageContent />
+    </Suspense>
   );
 }

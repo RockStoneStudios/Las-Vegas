@@ -1,10 +1,12 @@
-'use client'
+'use client';
+
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSocketStore } from '@/lib/store/useSocketStore';
 import gsap from 'gsap';
 
-export default function TermometroPage() {
+function TermometroPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter(); // 🔥 Importamos el router
   const sessionId = searchParams.get('sessionId');
@@ -159,5 +161,13 @@ export default function TermometroPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function TermometroPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <TermometroPageContent />
+    </Suspense>
   );
 }
