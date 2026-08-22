@@ -257,13 +257,13 @@ export default function PaginaAdmin() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/auth/cerrar-mesa/${numeroMesa}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-session-id': sessionId,
-        },
-      });
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/cerrar-mesa/${numeroMesa}`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-session-id': sessionId,
+  },
+});
 
       console.log('📥 [FRONTEND] Response status:', response.status);
       console.log('📥 [FRONTEND] Response ok:', response.ok);

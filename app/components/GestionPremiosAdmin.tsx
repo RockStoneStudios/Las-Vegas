@@ -23,7 +23,7 @@ export default function GestionPremiosAdmin() {
   useEffect(() => {
     async function cargarPremios() {
       try {
-        const res = await fetch('http://localhost:3001/api/juegos/premios');
+       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/juegos/premios`);
         const data = await res.json();
         if (data.ok && Array.isArray(data.data)) {
           setPremios(data.data);
@@ -74,11 +74,11 @@ export default function GestionPremiosAdmin() {
   async function guardarCambios() {
     setGuardando(true);
     try {
-      const res = await fetch('http://localhost:3001/api/juegos/premios', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ premios }),
-      });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/juegos/premios`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ premios }),
+});
 
       const data = await res.json();
       if (data.ok) {

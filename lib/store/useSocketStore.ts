@@ -69,8 +69,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       }
     }
 
-    const wsUrl = `ws://localhost:3001/ws?sessionId=${newSessionId}`;
-    console.log(`🔌 [STORE] Conectando a: ${wsUrl}`);
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:3001';
+const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;    console.log(`🔌 [STORE] Conectando a: ${wsUrl}`);
 
     const ws = new WebSocket(wsUrl);
     set({ socket: ws, sessionId: newSessionId, mesa, rol, conectado: false });
