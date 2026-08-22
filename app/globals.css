@@ -1,31 +1,29 @@
 @import "tailwindcss";
 
+/* 1. Configuramos el fondo por defecto a Negro #020106 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020106;
+  --foreground: #ffffff;
 }
 
+/* 2. Definimos el tema inline para Tailwind v4 */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-orbitron: var(--font-orbitron);
+  --font-space: var(--font-space);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* 3. Aplicamos las variables al body (Tailwind v4 ya no usa 'var(--background)' directo en el body, así que lo dejamos así) */
 body {
-  background: var(--background);
+  background-color: #020106; /* Forzamos el color negro */
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-
+/* 4. Tus clases de fuentes personalizadas */
 @layer base {
   .font-orbitron {
     font-family: var(--font-orbitron), sans-serif;

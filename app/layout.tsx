@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/app/components/Navbar"; 
 import { MesaProvider } from "@/lib/context/MesaContext";
 import { PanelControlProvider } from "@/lib/context/PanelControlContext";
+import { WebSocketListener } from "@/app/components/WebSocketListener"; // ✅ Importar el listener
 
 const orbitron = Orbitron({
   subsets: ['latin'],
@@ -40,6 +41,8 @@ export default function RootLayout({
             <main className="grow pt-20 flex flex-col">
               {children}
             </main>
+            {/* ✅ Escucha eventos de WebSocket en TODA la app */}
+            <WebSocketListener />
           </PanelControlProvider>
         </MesaProvider>
       </body>

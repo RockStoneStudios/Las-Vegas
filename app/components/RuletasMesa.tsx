@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from 'react';
 
-// Colores neón contrastados para estética Neo-Punk
 const COLORES_RULETA = ['#ff007f', '#0d0722'];
 
 function polarACartesiano(cx: number, cy: number, r: number, anguloGrados: number) {
@@ -19,11 +18,21 @@ function describirPorcion(cx: number, cy: number, r: number, anguloInicio: numbe
 
 interface RuletaMesasProps {
   numMesas: number;
+  mesaGanadoraTarget?: number | null;
+  duracionSegundos?: number;
   onResultado?: (mesaGanadora: number) => void;
   onInicioGiro?: () => void;
+  onVolverGirar?: () => void;
 }
 
-export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: RuletaMesasProps) {
+export default function RuletaMesas({
+  numMesas,
+  mesaGanadoraTarget,
+  duracionSegundos = 11,
+  onResultado,
+  onInicioGiro,
+  onVolverGirar
+}: RuletaMesasProps) {
   const segmentosRuleta = Array.from({ length: numMesas }, (_, i) => i + 1);
   const totalSegmentos = segmentosRuleta.length;
   const anguloSegmento = 360 / totalSegmentos;
@@ -31,16 +40,15 @@ export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: Rul
   const [rotacion, setRotacion] = useState(0);
   const [girando, setGirando] = useState(false);
   const [ganadora, setGanadora] = useState<number | null>(null);
-  const [duracionActual, setDuracionActual] = useState(12); // ✅ Cambiado: 12 segundos por defecto
   const [indiceRuletaGanador, setIndiceRuletaGanador] = useState<number | null>(null);
+  const [targetPendiente, setTargetPendiente] = useState<number | null>(null);
 
   const rotacionAcumulada = useRef(0);
   const timeoutRuletaRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Dimensiones SVG
   const cx = 300, cy = 300;
-  const r = 285; 
-  const radioTexto = r * 0.82; 
+  const r = 285;
+  const radioTexto = r * 0.82;
 
   const limpiarTimers = () => {
     if (timeoutRuletaRef.current) clearTimeout(timeoutRuletaRef.current);
@@ -50,36 +58,37 @@ export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: Rul
     return () => limpiarTimers();
   }, []);
 
-  function obtenerAleatorio(min: number, max: number) {
-    return Math.random() * (max - min) + min;
-  }
+  // ✅ Guardar target pendiente sin ejecutar
+  useEffect(() => {
+    if (mesaGanadoraTarget && mesaGanadoraTarget > 0 && !girando) {
+      setTargetPendiente(mesaGanadoraTarget);
+    }
+  }, [mesaGanadoraTarget]);
 
-  function reiniciarEstado() {
+  // ✅ Ejecutar el giro SOLO cuando el componente está listo
+  useEffect(() => {
+    if (targetPendiente && !girando) {
+      ejecutarGiroSincronizado(targetPendiente);
+    }
+  }, [targetPendiente]);
+
+  function ejecutarGiroSincronizado(targetMesa: number) {
+    if (girando) return;
+
+    if (onInicioGiro) onInicioGiro();
+
+    setGirando(true);
     limpiarTimers();
     setGanadora(null);
     setIndiceRuletaGanador(null);
-  }
+    setTargetPendiente(null);
 
-  function iniciarSorteo() {
-    if (girando) return;
-    
-    if (onInicioGiro) {
-      onInicioGiro();
-    }
+    const idx = segmentosRuleta.findIndex((m) => m === targetMesa);
+    const indiceGanador = idx !== -1 ? idx : 0;
 
-    setGirando(true);
-    reiniciarEstado();
-
-    // ✅ CAMBIADO: Duración entre 11 y 14 segundos (antes 7-10)
-    const segundosAleatorios = obtenerAleatorio(13, 18);
-    setDuracionActual(segundosAleatorios);
-    const milisegundosSorteo = segundosAleatorios * 1000;
-
-    const indiceGanador = Math.floor(Math.random() * totalSegmentos);
     const anguloCentroSegmento = (indiceGanador * anguloSegmento) + (anguloSegmento / 2);
-    
-    // ✅ CAMBIADO: Muchas más vueltas (15-25 en lugar de 10-14)
-    const vueltasExtra = Math.floor(obtenerAleatorio(18, 25));
+
+    const vueltasExtra = 20;
     const anguloObjetivo = (360 * vueltasExtra) - anguloCentroSegmento;
 
     const anguloActualMod = ((rotacionAcumulada.current % 360) + 360) % 360;
@@ -90,25 +99,19 @@ export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: Rul
     rotacionAcumulada.current = nuevaRotacion;
     setRotacion(nuevaRotacion);
 
-    // ✅ Log para debug
-    console.log(`🎰 Girando ${vueltasExtra} vueltas en ${segundosAleatorios.toFixed(1)}s`);
-
     timeoutRuletaRef.current = setTimeout(() => {
-      const mesaGanadora = segmentosRuleta[indiceGanador];
       setGirando(false);
-      setGanadora(mesaGanadora);
+      setGanadora(targetMesa);
       setIndiceRuletaGanador(indiceGanador);
 
       if (onResultado) {
-        onResultado(mesaGanadora);
+        onResultado(targetMesa);
       }
-    }, milisegundosSorteo);
+    }, duracionSegundos * 1000);
   }
 
   return (
     <div className="flex flex-col items-center gap-6 w-full">
-      
-      {/* 🏆 1. GANADOR ARRIBA DE LA RULETA */}
       <div className="min-h-[3rem] flex items-center justify-center">
         {ganadora && (
           <div className="text-xl sm:text-3xl text-[#ffd700] font-black font-orbitron tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_#ffd700] bg-[#0c0824]/90 px-6 py-3 rounded-2xl border-2 border-[#ffd700]">
@@ -117,31 +120,26 @@ export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: Rul
         )}
       </div>
 
-      {/* 🎯 2. RULETA CON ESTILO NEO-PUNK */}
       <div className="relative w-full max-w-[520px] aspect-square flex items-center justify-center">
-        {/* Aguja apuntadora superior con luz Neón Cyan */}
         <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[18px] border-l-transparent border-r-[18px] border-r-transparent border-t-[36px] border-t-[#2ee6d6] z-20 drop-shadow-[0_0_15px_#2ee6d6]" />
-        
+
         <svg
-          width="100%" 
-          height="100%" 
+          width="100%"
+          height="100%"
           viewBox="0 0 600 600"
           className="drop-shadow-[0_0_35px_rgba(255,0,127,0.35)] will-change-transform"
           style={{
             transform: `rotate(${rotacion}deg)`,
-            // ✅ CAMBIADO: cubic-bezier para desaceleración más suave
-            transition: girando ? `transform ${duracionActual}s cubic-bezier(0.08, 0.82, 0.17, 1)` : 'none',
+            transition: girando ? `transform ${duracionSegundos}s cubic-bezier(0.08, 0.82, 0.17, 1)` : 'none',
           }}
         >
           <defs>
-            {/* Núcleo neón central */}
             <radialGradient id="hub-punk" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#2ee6d6" />
               <stop offset="60%" stopColor="#ff007f" />
               <stop offset="100%" stopColor="#060413" />
             </radialGradient>
 
-            {/* Brillo Neón Dorado para el Segmento Ganador */}
             <filter id="neon-dorado-punk" x="-50%" y="-50%" width="200%" height="200%">
               <feGaussianBlur stdDeviation="5" result="blur1" />
               <feGaussianBlur stdDeviation="12" result="blur2" />
@@ -153,7 +151,6 @@ export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: Rul
             </filter>
           </defs>
 
-          {/* Borde exterior cromado / neón */}
           <circle cx={cx} cy={cy} r={r + 6} fill="none" stroke="#2ee6d6" strokeWidth="4" className="drop-shadow-[0_0_10px_#2ee6d6]" />
 
           {segmentosRuleta.map((mesa, i) => {
@@ -167,18 +164,18 @@ export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: Rul
               <g key={i}>
                 <path
                   d={describirPorcion(cx, cy, r, anguloInicio, anguloFin)}
-                  fill={esSegmentoGanador ? '#ffd700' : COLORES_RULETA[i % 2]} 
-                  stroke={esSegmentoGanador ? '#ffffff' : '#ff007f'} 
-                  strokeWidth={esSegmentoGanador ? "4" : "1.5"} 
+                  fill={esSegmentoGanador ? '#ffd700' : COLORES_RULETA[i % 2]}
+                  stroke={esSegmentoGanador ? '#ffffff' : '#ff007f'}
+                  strokeWidth={esSegmentoGanador ? "4" : "1.5"}
                   filter={esSegmentoGanador ? "url(#neon-dorado-punk)" : "none"}
                   className="transition-all duration-300"
                 />
                 <text
-                  x={posTexto.x} 
-                  y={posTexto.y} 
-                  fill={esSegmentoGanador ? '#000000' : '#ffffff'} 
-                  fontSize={esSegmentoGanador ? "22" : "17"} 
-                  textAnchor="middle" 
+                  x={posTexto.x}
+                  y={posTexto.y}
+                  fill={esSegmentoGanador ? '#000000' : '#ffffff'}
+                  fontSize={esSegmentoGanador ? "22" : "17"}
+                  textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`rotate(${anguloMedio}, ${posTexto.x}, ${posTexto.y})`}
                   className="font-black font-sans tracking-wider"
@@ -192,25 +189,24 @@ export default function RuletaMesas({ numMesas, onResultado, onInicioGiro }: Rul
             );
           })}
 
-          {/* Centro de la ruleta */}
           <circle cx={cx} cy={cy} r="38" fill="url(#hub-punk)" stroke="#ffffff" strokeWidth="2" className="drop-shadow-[0_0_15px_#2ee6d6]" />
         </svg>
       </div>
 
-      {/* 🔘 3. BOTÓN DE SORTEO */}
-      <button
-        onClick={iniciarSorteo}
-        disabled={girando}
-        className={`px-10 py-4 text-sm sm:text-base font-black font-orbitron rounded-full text-white tracking-widest uppercase transition-all duration-300 disabled:cursor-not-allowed
-          ${girando 
-            ? 'bg-[#1f1645] opacity-60 border border-purple-900' 
-            : 'bg-gradient-to-r from-[#ff00a0] via-[#9b5de5] to-[#2ee6d6] shadow-[0_0_25px_rgba(255,0,160,0.6)] hover:shadow-[0_0_35px_rgba(46,230,214,0.8)] hover:scale-105 active:scale-95'
-          }
-        `}
-      >
-        {girando ? '⚡ SORTEANDO... ⚡' : 'INICIAR SORTEO'}
-      </button>
-
+      {onVolverGirar && (
+        <button
+          onClick={onVolverGirar}
+          disabled={girando}
+          className={`px-10 py-4 text-sm sm:text-base font-black font-orbitron rounded-full text-white tracking-widest uppercase transition-all duration-300 disabled:cursor-not-allowed
+            ${girando
+              ? 'bg-[#1f1645] opacity-60 border border-purple-900'
+              : 'bg-gradient-to-r from-[#ff00a0] via-[#9b5de5] to-[#2ee6d6] shadow-[0_0_25px_rgba(255,0,160,0.6)] hover:shadow-[0_0_35px_rgba(46,230,214,0.8)] hover:scale-105 active:scale-95 cursor-pointer'
+            }
+          `}
+        >
+          {girando ? '⚡ SORTEANDO... ⚡' : 'VOLVER A GIRAR'}
+        </button>
+      )}
     </div>
   );
 }
