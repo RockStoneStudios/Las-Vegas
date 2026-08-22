@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useSocketStore } from '@/lib/store/useSocketStore';
@@ -18,7 +19,7 @@ function esPremioPerdedor(texto: string): boolean {
   return PALABRAS_PERDEDOR.some((palabra) => textoNormalizado.includes(palabra));
 }
 
-export default function RuletaPage() {
+function RuletaPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -311,5 +312,13 @@ export default function RuletaPage() {
         Reordenar premios
       </button>
     </div>
+  );
+}
+
+export default function RuletaPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <RuletaPageContent />
+    </Suspense>
   );
 }
