@@ -4,36 +4,87 @@ import { Suspense } from 'react';
 import { useState, Fragment, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import gsap from 'gsap';
 
 function NavbarContent() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [mostrarModalQR, setMostrarModalQR] = useState(false);
   const [mesaActual, setMesaActual] = useState<string | null>(null);
+  const [tieneSesionValida, setTieneSesionValida] = useState(false);
 
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const linksRef = useRef<(HTMLAnchorElement | null)[]>([]);
 
-  // Detectar si el usuario está en una mesa por URL o Storage
+  // ✅ DETECTAR MESA Y SESIÓN
   useEffect(() => {
-    const mesaUrl = searchParams.get('mesa');
+    const sessionId = localStorage.getItem('sessionId');
     const mesaStorage = localStorage.getItem('mesa_numero');
-    const pathname = window.location.pathname;
-
+    
+    // 🔥 Si está en la página de una mesa
     if (pathname.startsWith('/mesa/')) {
-      if (mesaUrl) {
-        setMesaActual(mesaUrl);
-        localStorage.setItem('mesa_numero', mesaUrl);
-      } else if (mesaStorage) {
-        setMesaActual(mesaStorage);
+      const mesaUrl = searchParams.get('mesa');
+      const pathMesaMatch = pathname.match(/\/mesa\/(\d+)/);
+      const mesaNumero = mesaUrl || (pathMesaMatch ? pathMesaMatch[1] : null);
+      
+      if (mesaNumero) {
+        setMesaActual(mesaNumero);
+        localStorage.setItem('mesa_numero', mesaNumero);
+        if (sessionId) setTieneSesionValida(true);
+        return;
       }
-    } else if (pathname.startsWith('/admin')) {
-      setMesaActual('ADMIN'); // 👈 Insignia especial para Admin
-    } else {
-      setMesaActual(null);
+      
+      // Si está en mesa/ pero no tiene número, usar localStorage
+      if (mesaStorage) {
+        setMesaActual(mesaStorage);
+        if (sessionId) setTieneSesionValida(true);
+        return;
+      }
     }
-  }, [searchParams]);
+    
+    // 🔥 Si tiene sessionId y mesa en storage, está validado
+    if (sessionId && mesaStorage) {
+      setMesaActual(mesaStorage);
+      setTieneSesionValida(true);
+      return;
+    }
+    
+    // 🔥 Admin
+    if (pathname.startsWith('/admin')) {
+      setMesaActual('ADMIN');
+      setTieneSesionValida(true);
+      return;
+    }
+    
+    // 🔥 Sin sesión válida
+    setMesaActual(null);
+    setTieneSesionValida(false);
+    
+  }, [searchParams, pathname]);
+
+  // ✅ MANEJAR CLIC EN ENLACES QUE REQUIEREN MESA
+  const manejarClicEnlace = (e: React.MouseEvent, requiereMesa: boolean, url: string) => {
+    if (requiereMesa && !tieneSesionValida) {
+      e.preventDefault();
+      setMenuAbierto(false);
+      setMostrarModalQR(true);
+      return;
+    }
+    
+    // 🔥 Si tiene sesión válida, dejar que navegue normalmente
+    setMenuAbierto(false);
+  };
+
+  // ✅ MANEJAR CLIC EN LOGO (siempre a home)
+  const manejarClicLogo = (e: React.MouseEvent) => {
+    // Si está en una mesa y cierra sesión, limpiar storage
+    if (mesaActual && mesaActual !== 'ADMIN') {
+      localStorage.removeItem('sessionId');
+      localStorage.removeItem('mesa_numero');
+    }
+    setMenuAbierto(false);
+  };
 
   const enlaces = [
     { 
@@ -62,7 +113,7 @@ function NavbarContent() {
     },
   ];
 
-  // Animación GSAP de parpadeo eléctrico Neón
+  // Animación GSAP
   useEffect(() => {
     linksRef.current.forEach((el) => {
       if (!el) return;
@@ -93,17 +144,6 @@ function NavbarContent() {
     };
   }, []);
 
-  // Manejador para clics en secciones interactivas que requieren estar en el bar
-  const manejarClicEnlace = (e: React.MouseEvent, requiereMesa: boolean) => {
-    if (requiereMesa && !mesaActual) {
-      e.preventDefault();
-      setMenuAbierto(false);
-      setMostrarModalQR(true);
-    } else {
-      setMenuAbierto(false);
-    }
-  };
-
   return (
     <>
       <nav className="fixed top-0 left-0 w-full z-50 bg-[#060413]/85 backdrop-blur-md border-b border-[#2b1b4b] shadow-[0_4px_30px_rgba(155,93,229,0.15)] select-none">
@@ -112,7 +152,11 @@ function NavbarContent() {
             
             {/* Logo */}
             <div className="shrink-0 flex items-center gap-3">
-              <Link href="/" className="group flex items-center transition-transform duration-300 hover:scale-105">
+              <Link 
+                href="/" 
+                className="group flex items-center transition-transform duration-300 hover:scale-105"
+                onClick={manejarClicLogo}
+              >
                 <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
                   <Image
                     src="/lasvesgas-logo.PNG"
@@ -125,10 +169,14 @@ function NavbarContent() {
                 </div>
               </Link>
 
-              {/* Insignia de Estado (Mesa vs Modo Web Público) */}
+              {/* Insignia de Estado */}
               {mesaActual === 'ADMIN' ? (
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/10 border border-pink-500/40 text-pink-400 font-orbitron text-xs font-bold">
                   🎧 ADMIN
+                </div>
+              ) : mesaActual && tieneSesionValida ? (
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-orbitron text-xs font-bold animate-pulse">
+                  🟢 MESA #{mesaActual}
                 </div>
               ) : (
                 <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 font-space text-[11px]">
@@ -144,7 +192,7 @@ function NavbarContent() {
                   <Link
                     ref={(el) => { linksRef.current[index] = el; }}
                     href={enlace.url}
-                    onClick={(e) => manejarClicEnlace(e, enlace.requiereMesa)}
+                    onClick={(e) => manejarClicEnlace(e, enlace.requiereMesa, enlace.url)}
                     className={`font-space font-extrabold text-sm tracking-[0.15em] uppercase transition-transform duration-300 hover:scale-105 ${enlace.colorClass}`}
                   >
                     {enlace.nombre}
@@ -160,9 +208,9 @@ function NavbarContent() {
 
             {/* Botón Menú Hamburguesa (Móvil) */}
             <div className="md:hidden flex items-center gap-3">
-              {mesaActual && (
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-orbitron text-[10px] font-bold">
-                  MESA #{mesaActual}
+              {mesaActual && tieneSesionValida && mesaActual !== 'ADMIN' && (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-orbitron text-[10px] font-bold animate-pulse">
+                  🟢 #{mesaActual}
                 </span>
               )}
               <button
@@ -201,7 +249,7 @@ function NavbarContent() {
           >
             <div className="flex items-center justify-between h-10 mb-4 border-b border-[#1f1645] pb-2">
               <span className="font-orbitron text-xs font-bold text-gray-400">
-                {mesaActual ? `🟢 MESA #${mesaActual}` : '🌐 LAS VEGAS WEB'}
+                {mesaActual && tieneSesionValida ? `🟢 MESA #${mesaActual}` : '🌐 LAS VEGAS WEB'}
               </span>
               <button
                 onClick={() => setMenuAbierto(false)}
@@ -220,7 +268,7 @@ function NavbarContent() {
                   <Link
                     ref={(el) => { linksRef.current[index + enlaces.length] = el; }}
                     href={enlace.url}
-                    onClick={(e) => manejarClicEnlace(e, enlace.requiereMesa)}
+                    onClick={(e) => manejarClicEnlace(e, enlace.requiereMesa, enlace.url)}
                     className={`flex items-center py-3.5 px-2 font-space font-extrabold text-lg tracking-[0.15em] uppercase transition-transform duration-200 ${enlace.colorClass}`}
                   >
                     {enlace.nombre}
@@ -266,7 +314,7 @@ function NavbarContent() {
 
 export default function Navbar() {
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
+    <Suspense fallback={<div className="h-20 bg-[#060413]" />}>
       <NavbarContent />
     </Suspense>
   );
