@@ -76,9 +76,9 @@ function NavbarContent() {
     setMenuAbierto(false);
   };
 
-  // ✅ MANEJAR CLIC EN LOGO
-  const manejarClicLogo = () => {
-    // Si está en una mesa y navega al home, limpiar la sesión
+  // ✅ MANEJAR CLIC EN LOGO (siempre a home)
+  const manejarClicLogo = (e: React.MouseEvent) => {
+    // Si está en una mesa y cierra sesión, limpiar storage
     if (mesaActual && mesaActual !== 'ADMIN') {
       localStorage.removeItem('sessionId');
       localStorage.removeItem('mesa_numero');
@@ -152,39 +152,22 @@ function NavbarContent() {
             
             {/* Logo */}
             <div className="shrink-0 flex items-center gap-3">
-              {mesaActual && mesaActual !== 'ADMIN' ? (
-                // 🟢 Si está en una MESA: Se renderiza como DIV estático para no bloquear eventos Link ni romper la navegación
-                <div className="group flex items-center cursor-default">
-                  <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
-                    <Image
-                      src="/lasvesgas-logo.PNG"
-                      alt="Las Vegas Discobar Logo"
-                      width={220}
-                      height={220}
-                      className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]"
-                      priority
-                    />
-                  </div>
+              <Link 
+                href="/" 
+                className="group flex items-center transition-transform duration-300 hover:scale-105"
+                onClick={manejarClicLogo}
+              >
+                <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
+                  <Image
+                    src="/lasvesgas-logo.PNG"
+                    alt="Las Vegas Discobar Logo"
+                    width={220}
+                    height={220}
+                    className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)] group-hover:drop-shadow-[0_0_18px_rgba(34,211,238,0.9)] transition-all duration-300"
+                    priority
+                  />
                 </div>
-              ) : (
-                // 🟢 Si es WEB normal o ADMIN: Navega de forma limpia al Home sin e.preventDefault()
-                <Link 
-                  href="/" 
-                  className="group flex items-center transition-transform duration-300 hover:scale-105"
-                  onClick={manejarClicLogo}
-                >
-                  <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
-                    <Image
-                      src="/lasvesgas-logo.PNG"
-                      alt="Las Vegas Discobar Logo"
-                      width={220}
-                      height={220}
-                      className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)] group-hover:drop-shadow-[0_0_18px_rgba(34,211,238,0.9)] transition-all duration-300"
-                      priority
-                    />
-                  </div>
-                </Link>
-              )}
+              </Link>
 
               {/* Insignia de Estado */}
               {mesaActual === 'ADMIN' ? (
