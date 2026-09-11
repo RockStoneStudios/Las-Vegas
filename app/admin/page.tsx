@@ -23,8 +23,6 @@ export default function PaginaAdmin() {
   // 🎵 Control del modo "Pedir Canción"
   const [pedirCancionActivo, setPedirCancionActivo] = useState(false);
 
-  // 📺 Control del Visual de Bajos
-  const [visualActivo, setVisualActivo] = useState(false);
 
   // 📌 Estado de la votación
   const [votacionActiva, setVotacionActiva] = useState<{
@@ -105,10 +103,7 @@ export default function PaginaAdmin() {
       setPedirCancionActivo(payload.activo);
     }
 
-    if (tipo === 'EVENT:TOGGLE_VISUAL_BASS') {
-      setVisualActivo(payload.activo);
-    }
-
+   
     const eventosLlamado = ['ALERT:LLAMADO_MESERO', 'ACTION:SOLICITAR_ATENCION', 'EVENT:NUEVO_LLAMADO'];
     if (eventosLlamado.includes(tipo)) {
       obtenerContadorPendientes();
