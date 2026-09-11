@@ -150,24 +150,39 @@ function NavbarContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             
-            {/* Logo */}
+            {/* Logo y Estado */}
             <div className="shrink-0 flex items-center gap-3">
-              <Link 
-                href="/" 
-                className="group flex items-center transition-transform duration-300 hover:scale-105"
-                onClick={manejarClicLogo}
-              >
-                <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
+              {pathname.startsWith('/mesa/') ? (
+                // 🚫 MODO MESA: Logo estático sin navegación a home
+                <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center select-none pointer-events-none">
                   <Image
                     src="/lasvesgas-logo.PNG"
                     alt="Las Vegas Discobar Logo"
                     width={220}
                     height={220}
-                    className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)] group-hover:drop-shadow-[0_0_18px_rgba(34,211,238,0.9)] transition-all duration-300"
+                    className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]"
                     priority
                   />
                 </div>
-              </Link>
+              ) : (
+                // 🌐 MODO NORMAL: Permite ir al home
+                <Link 
+                  href="/" 
+                  className="group flex items-center transition-transform duration-300 hover:scale-105"
+                  onClick={manejarClicLogo}
+                >
+                  <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
+                    <Image
+                      src="/lasvesgas-logo.PNG"
+                      alt="Las Vegas Discobar Logo"
+                      width={220}
+                      height={220}
+                      className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)] group-hover:drop-shadow-[0_0_18px_rgba(34,211,238,0.9)] transition-all duration-300"
+                      priority
+                    />
+                  </div>
+                </Link>
+              )}
 
               {/* Insignia de Estado */}
               {mesaActual === 'ADMIN' ? (
