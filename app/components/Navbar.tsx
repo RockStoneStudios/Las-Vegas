@@ -17,7 +17,7 @@ function NavbarContent() {
   const pathname = usePathname();
   const linksRef = useRef<(HTMLAnchorElement | null)[]>([]);
 
-  // ✅ DETECTAR MESA Y SESIÓN
+  // ✅ DETECTAR MESA Y SESIÓN CORREGIDO
   useEffect(() => {
     const sessionId = localStorage.getItem('sessionId');
     const mesaStorage = localStorage.getItem('mesa_numero');
@@ -50,10 +50,11 @@ function NavbarContent() {
       return;
     }
     
-    // 🔥 Admin
+    // 🔥 Admin: Solo marca sesión válida si existe un token real de administración
     if (pathname.startsWith('/admin')) {
+      const adminToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
       setMesaActual('ADMIN');
-      setTieneSesionValida(true);
+      setTieneSesionValida(!!adminToken);
       return;
     }
     
