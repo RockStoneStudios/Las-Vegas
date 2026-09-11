@@ -135,20 +135,34 @@ export default function PaginaAdmin() {
     }
 
     if (tipo === 'EVENT:VOTACION_ACTUALIZADA') {
-      if (!payload.opciones || !Array.isArray(payload.opciones)) return;
+  if (!payload.opciones || !Array.isArray(payload.opciones)) return;
 
-      const nuevasOpciones = payload.opciones.map((o: any) => ({
-        id: o.id,
-        texto: o.texto,
-        votos: o.votos || 0,
-      }));
+  const nuevasOpciones = payload.opciones.map((o: any) => ({
+    id: o.id,
+    texto: o.texto,
+    votos: o.votos || 0,
+  }));
 
-      setVotacionActiva((prev) => ({
-        ...prev!,
+  setVotacionActiva((prev) => {
+    if (!prev) {
+      // ✅ Si el admin no tenía la votación cargada, la creamos completa
+      return {
+        id: payload.id || '',
+        pregunta: 'Votación en curso',
         opciones: nuevasOpciones,
-      }));
-      return;
+        duracion: 0,
+      };
     }
+    return {
+      ...prev,
+      opciones: nuevasOpciones,
+    };
+  });
+
+  // ✅ Aseguramos que el panel se muestre
+  setVotacionIniciada(true);
+  return;
+}
 
     if (tipo === 'EVENT:VOTACION_CERRADA') {
       setVotacionIniciada(false);
