@@ -17,7 +17,7 @@ function NavbarContent() {
   const pathname = usePathname();
   const linksRef = useRef<(HTMLAnchorElement | null)[]>([]);
 
-  // ✅ DETECTAR MESA Y SESIÓN CORREGIDO
+  // ✅ DETECTAR MESA Y SESIÓN
   useEffect(() => {
     const sessionId = localStorage.getItem('sessionId');
     const mesaStorage = localStorage.getItem('mesa_numero');
@@ -50,11 +50,10 @@ function NavbarContent() {
       return;
     }
     
-    // 🔥 Admin: Solo marca sesión válida si existe un token real de administración
+    // 🔥 Admin
     if (pathname.startsWith('/admin')) {
-      const adminToken = localStorage.getItem('adminToken') || localStorage.getItem('token');
       setMesaActual('ADMIN');
-      setTieneSesionValida(!!adminToken);
+      setTieneSesionValida(true);
       return;
     }
     
@@ -78,12 +77,11 @@ function NavbarContent() {
   };
 
   // ✅ MANEJAR CLIC EN LOGO
-  const manejarClicLogo = (e: React.MouseEvent) => {
-    // Si está en una mesa, bloquear la salida al Home
+  const manejarClicLogo = () => {
+    // Si está en una mesa y navega al home, limpiar la sesión
     if (mesaActual && mesaActual !== 'ADMIN') {
-      e.preventDefault();
-      setMenuAbierto(false);
-      return;
+      localStorage.removeItem('sessionId');
+      localStorage.removeItem('mesa_numero');
     }
     setMenuAbierto(false);
   };
@@ -154,22 +152,39 @@ function NavbarContent() {
             
             {/* Logo */}
             <div className="shrink-0 flex items-center gap-3">
-              <Link 
-                href="/" 
-                className="group flex items-center transition-transform duration-300 hover:scale-105"
-                onClick={manejarClicLogo}
-              >
-                <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
-                  <Image
-                    src="/lasvesgas-logo.PNG"
-                    alt="Las Vegas Discobar Logo"
-                    width={220}
-                    height={220}
-                    className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)] group-hover:drop-shadow-[0_0_18px_rgba(34,211,238,0.9)] transition-all duration-300"
-                    priority
-                  />
+              {mesaActual && mesaActual !== 'ADMIN' ? (
+                // 🟢 Si está en una MESA: Se renderiza como DIV estático para no bloquear eventos Link ni romper la navegación
+                <div className="group flex items-center cursor-default">
+                  <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
+                    <Image
+                      src="/lasvesgas-logo.PNG"
+                      alt="Las Vegas Discobar Logo"
+                      width={220}
+                      height={220}
+                      className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)]"
+                      priority
+                    />
+                  </div>
                 </div>
-              </Link>
+              ) : (
+                // 🟢 Si es WEB normal o ADMIN: Navega de forma limpia al Home sin e.preventDefault()
+                <Link 
+                  href="/" 
+                  className="group flex items-center transition-transform duration-300 hover:scale-105"
+                  onClick={manejarClicLogo}
+                >
+                  <div className="relative w-28 h-10 sm:w-36 sm:h-12 flex items-center justify-center">
+                    <Image
+                      src="/lasvesgas-logo.PNG"
+                      alt="Las Vegas Discobar Logo"
+                      width={220}
+                      height={220}
+                      className="object-contain filter drop-shadow-[0_0_10px_rgba(34,211,238,0.6)] group-hover:drop-shadow-[0_0_18px_rgba(34,211,238,0.9)] transition-all duration-300"
+                      priority
+                    />
+                  </div>
+                </Link>
+              )}
 
               {/* Insignia de Estado */}
               {mesaActual === 'ADMIN' ? (
