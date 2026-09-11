@@ -222,7 +222,7 @@ export default function GestionPremiosAdmin() {
         disabled={guardando}
         className="w-full bg-[#00f3ff] text-black font-black text-xs uppercase py-3 rounded-xl hover:shadow-[0_0_20px_#00f3ff] transition-all cursor-pointer disabled:opacity-50"
       >
-        {guardando ? 'GUARDANDO EN BASE DE DATOS...' : '💾 GUARDAR CAMBIOS EN MONGO DB'}
+        {guardando ? 'GUARDANDO EN BASE DE DATOS...' : '💾 GUARDAR CAMBIOS '}
       </button>
     </div>
   );

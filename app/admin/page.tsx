@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PanelControlAdmin from '@/app/components/juegos/PanelControlAdmin';
-import GestionPremiosAdmin from '@/app/components/GestionPremiosAdmin';
 import { useSocketStore } from '@/lib/store/useSocketStore';
 
 export default function PaginaAdmin() {
@@ -13,11 +12,19 @@ export default function PaginaAdmin() {
   const [cargando, setCargando] = useState(true);
   const [numeroMesa, setNumeroMesa] = useState<number | null>(2);
   
+  // 🔒 Estado para Modal de PIN de Premios
+  const [mostrarModalPin, setMostrarModalPin] = useState(false);
+  const [pinIngresado, setPinIngresado] = useState('');
+  const [errorPin, setErrorPin] = useState(false);
+
   // 🔔 Contador de notificaciones (solicitudes de mesero)
   const [notificaciones, setNotificaciones] = useState(0);
 
   // 🎵 Control del modo "Pedir Canción"
   const [pedirCancionActivo, setPedirCancionActivo] = useState(false);
+
+  // 📺 Control del Visual de Bajos
+  const [visualActivo, setVisualActivo] = useState(false);
 
   // 📌 Estado de la votación
   const [votacionActiva, setVotacionActiva] = useState<{
@@ -42,6 +49,19 @@ export default function PaginaAdmin() {
   
   const { enviarMensaje, mensajeWS, conectarSocket, conectado } = useSocketStore();
 
+  // 🔒 Validación de PIN para entrar a Premios
+  const handleValidarPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinIngresado === '7654321') {
+      setErrorPin(false);
+      setMostrarModalPin(false);
+      setPinIngresado('');
+      router.push('/admin/premios');
+    } else {
+      setErrorPin(true);
+    }
+  };
+
   // 🔔 Función para obtener el número real de solicitudes pendientes desde el backend
   const obtenerContadorPendientes = async () => {
     try {
@@ -55,7 +75,7 @@ export default function PaginaAdmin() {
     }
   };
 
-  // ✅ CONECTAR WEBSOCKET DEL ADMIN - ¡SIEMPRE PONE cargando = false!
+  // ✅ CONECTAR WEBSOCKET DEL ADMIN
   useEffect(() => {
     const sesionGuardada = localStorage.getItem('admin_sessionId') || localStorage.getItem('admin_session_id');
     
@@ -73,7 +93,7 @@ export default function PaginaAdmin() {
     setCargando(false);
   }, [conectarSocket, conectado, router]);
 
-  // 📡 Escuchar eventos de votación y notificaciones
+  // 📡 Escuchar eventos de votación, notificaciones y visual
   useEffect(() => {
     if (!mensajeWS) return;
 
@@ -81,18 +101,19 @@ export default function PaginaAdmin() {
     const payload = mensajeWS.payload || {};
     console.log('📩 [Admin] Evento recibido:', tipo, payload);
 
-    // 🎵 Recibir el estado del modo "Pedir Canción"
     if (tipo === 'EVENT:MODO_PEDIR_CANCION') {
       setPedirCancionActivo(payload.activo);
     }
 
-    // 🔔 NOTIFICACIONES: Llamada de mesero
+    if (tipo === 'EVENT:TOGGLE_VISUAL_BASS') {
+      setVisualActivo(payload.activo);
+    }
+
     const eventosLlamado = ['ALERT:LLAMADO_MESERO', 'ACTION:SOLICITAR_ATENCION', 'EVENT:NUEVO_LLAMADO'];
     if (eventosLlamado.includes(tipo)) {
       obtenerContadorPendientes();
     }
 
-    // 🧹 Cuando se atiende una mesa, también pedimos el nuevo contador
     const eventosAtendido = ['EVENT:LLAMADO_ATENDIDO', 'ACTION:ATENDER_MESA'];
     if (eventosAtendido.includes(tipo)) {
       const mesa = payload.mesa ?? payload.numeroMesa;
@@ -101,9 +122,7 @@ export default function PaginaAdmin() {
       }
     }
 
-    // Inicio de votación
     if (tipo === 'EVENT:VOTACION_EXPRES_START') {
-      console.log('🗳️ [Admin] INICIO VOTACIÓN');
       const nuevaVotacion = {
         id: payload.id,
         pregunta: payload.pregunta,
@@ -121,11 +140,7 @@ export default function PaginaAdmin() {
     }
 
     if (tipo === 'EVENT:VOTACION_ACTUALIZADA') {
-      console.log('📊 [Admin] ACTUALIZANDO VOTOS. Payload:', payload);
-      if (!payload.opciones || !Array.isArray(payload.opciones)) {
-        console.warn('⚠️ [Admin] Payload sin opciones:', payload);
-        return;
-      }
+      if (!payload.opciones || !Array.isArray(payload.opciones)) return;
 
       const nuevasOpciones = payload.opciones.map((o: any) => ({
         id: o.id,
@@ -141,7 +156,6 @@ export default function PaginaAdmin() {
     }
 
     if (tipo === 'EVENT:VOTACION_CERRADA') {
-      console.log('🗳️ [Admin] VOTACIÓN CERRADA');
       setVotacionIniciada(false);
       setVotacionActiva(null);
       setTiempoRestante(0);
@@ -166,12 +180,10 @@ export default function PaginaAdmin() {
     return () => clearInterval(timer);
   }, [votacionIniciada, tiempoRestante]);
 
-  // 🗳️ Agregar opción
   const agregarOpcion = () => {
     setOpcionesVotacion([...opcionesVotacion, '']);
   };
 
-  // 🗳️ Eliminar opción
   const eliminarOpcion = (index: number) => {
     if (opcionesVotacion.length <= 2) {
       alert('Mínimo 2 opciones');
@@ -180,14 +192,12 @@ export default function PaginaAdmin() {
     setOpcionesVotacion(opcionesVotacion.filter((_, i) => i !== index));
   };
 
-  // 🗳️ Actualizar opción
   const actualizarOpcion = (index: number, valor: string) => {
     const nuevas = [...opcionesVotacion];
     nuevas[index] = valor;
     setOpcionesVotacion(nuevas);
   };
 
-  // 🗳️ Iniciar votación
   const handleIniciarVotacion = () => {
     if (!preguntaVotacion.trim()) {
       alert('Escribe una pregunta');
@@ -200,7 +210,6 @@ export default function PaginaAdmin() {
     }
 
     if (!conectado) {
-      console.warn('⚠️ [Admin] WebSocket no conectado, reconectando...');
       if (sessionId) {
         conectarSocket(sessionId, 0, 'admin');
         setTimeout(() => {
@@ -210,7 +219,6 @@ export default function PaginaAdmin() {
       return;
     }
 
-    console.log('📤 [Admin] Enviando votación...');
     enviarMensaje({
       tipo: 'ACTION:VOTACION_EXPRES_START',
       payload: {
@@ -221,14 +229,12 @@ export default function PaginaAdmin() {
     });
   };
 
-  // 🗳️ Cerrar votación manualmente
   const handleCerrarVotacion = () => {
     setVotacionIniciada(false);
     setVotacionActiva(null);
     setTiempoRestante(0);
   };
 
-  // 🎵 Alternar el modo "Pedir Canción"
   const togglePedirCancion = () => {
     const nuevoEstado = !pedirCancionActivo;
     setPedirCancionActivo(nuevoEstado);
@@ -238,43 +244,28 @@ export default function PaginaAdmin() {
     });
   };
 
-  // 🧹 CERRAR MESA - FUNCIÓN COMPLETA
   const handleCerrarMesa = async (numeroMesa: number) => {
-    console.log('🧹 [FRONTEND] Iniciando cierre de mesa:', numeroMesa);
-    
     const sessionId = localStorage.getItem('admin_sessionId');
-    console.log('🧹 [FRONTEND] SessionId:', sessionId);
     
     if (!sessionId) {
-      console.log('❌ [FRONTEND] No hay sessionId');
       alert('❌ No hay sesión activa. Inicia sesión nuevamente.');
       return;
     }
 
-    if (!confirm(`¿Seguro que quieres cerrar la mesa #${numeroMesa}?`)) {
-      console.log('❌ [FRONTEND] Usuario canceló');
-      return;
-    }
+    if (!confirm(`¿Seguro que quieres cerrar la mesa #${numeroMesa}?`)) return;
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/auth/cerrar-mesa/${numeroMesa}`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-session-id': sessionId,
-  },
-});
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-id': sessionId,
+        },
+      });
 
-      console.log('📥 [FRONTEND] Response status:', response.status);
-      console.log('📥 [FRONTEND] Response ok:', response.ok);
-      
       const text = await response.text();
-      console.log('📥 [FRONTEND] Texto recibido:', text);
-      
       try {
         const data = JSON.parse(text);
-        console.log('📥 [FRONTEND] Data parseada:', data);
-        
         if (response.ok && data.ok) {
           alert(`✅ ${data.mensaje || `Mesa #${numeroMesa} cerrada correctamente`}`);
           obtenerContadorPendientes();
@@ -282,12 +273,9 @@ export default function PaginaAdmin() {
           alert(`❌ Error: ${data.error || 'No se pudo cerrar la mesa'}`);
         }
       } catch (parseError) {
-        console.error('❌ [FRONTEND] Error al parsear JSON:', parseError);
         alert('❌ Error al conectar con el servidor');
       }
-      
     } catch (error) {
-      console.error('❌ [FRONTEND] Error en fetch:', error);
       alert('❌ Error al conectar con el servidor');
     }
   };
@@ -321,7 +309,7 @@ export default function PaginaAdmin() {
           </span>
         </h1>
 
-        {/* 🟢 CABINA DE CONTROL CON BORDES PARPADEANTES */}
+        {/* 🟢 CABINA DE CONTROL */}
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 bg-[#080516]/80 border border-[#00f3ff]/30 px-4 sm:px-6 py-3 rounded-xl backdrop-blur-md shadow-[0_0_20px_rgba(0,243,255,0.15)] max-w-5xl w-full">
           
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -330,6 +318,14 @@ export default function PaginaAdmin() {
             </p>
             <span className="hidden md:inline text-[#00f3ff] text-xs">•</span>
           </div>
+
+          {/* 🎁 Botón protegido para Premios */}
+          <button
+            onClick={() => setMostrarModalPin(true)}
+            className="text-[10px] font-black text-[#ff00a0] hover:text-white hover:shadow-[0_0_12px_#ff00a0] transition-all uppercase tracking-widest cursor-pointer border border-[#ff00a0]/50 px-3 py-1.5 rounded-md bg-[#ff00a0]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#ff00a0]"
+          >
+            🎁 [ GESTIONAR PREMIOS ]
+          </button>
           
           {/* 🎰 Link a la ruleta */}
           <Link
@@ -541,16 +537,86 @@ export default function PaginaAdmin() {
         </div>
       </div>
 
-      {/* Panel de Control y Gestión de Premios */}
+      {/* Panel de Control */}
       <div className="relative z-10 w-full max-w-5xl flex flex-col gap-8 items-center">
         <PanelControlAdmin
           sessionId={sessionId}
           numeroMesa={numeroMesa}
           setNumeroMesa={setNumeroMesa}
         />
-
-        <GestionPremiosAdmin />
       </div>
+
+      {/* 🔐 MODAL DE VALIDACIÓN DE PIN */}
+      {mostrarModalPin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md px-4">
+          <div className="bg-[#080516] border border-[#ff00a0] rounded-2xl p-6 max-w-sm w-full shadow-[0_0_30px_rgba(255,0,160,0.3)] flex flex-col gap-4 relative animate-in fade-in zoom-in duration-200">
+            <button
+              onClick={() => {
+                setMostrarModalPin(false);
+                setErrorPin(false);
+                setPinIngresado('');
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-sm"
+            >
+              ✕
+            </button>
+
+            <div className="text-center">
+              <span className="text-3xl">🔐</span>
+              <h3 className="text-lg font-black text-[#ff00a0] uppercase tracking-wider mt-2">
+                Acceso Protegido
+              </h3>
+              <p className="text-xs text-gray-400 font-space mt-1">
+                Ingresa el PIN de seguridad para gestionar los premios.
+              </p>
+            </div>
+
+            <form onSubmit={handleValidarPin} className="flex flex-col gap-3">
+              <input
+                type="password"
+                value={pinIngresado}
+                onChange={(e) => {
+                  setPinIngresado(e.target.value);
+                  if (errorPin) setErrorPin(false);
+                }}
+                placeholder="Ingresa el PIN"
+                autoFocus
+                className={`w-full bg-[#0a0720] border rounded-xl px-4 py-3 text-center text-white font-space tracking-widest text-lg focus:outline-none transition-all ${
+                  errorPin
+                    ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)]'
+                    : 'border-[#1f1645] focus:border-[#ff00a0] focus:shadow-[0_0_15px_rgba(255,0,160,0.3)]'
+                }`}
+              />
+
+              {errorPin && (
+                <p className="text-red-400 text-xs font-space text-center animate-shake">
+                  ❌ PIN incorrecto. Inténtalo de nuevo.
+                </p>
+              )}
+
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMostrarModalPin(false);
+                    setErrorPin(false);
+                    setPinIngresado('');
+                  }}
+                  className="flex-1 py-2.5 border border-gray-600 rounded-xl text-xs font-space text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 bg-gradient-to-r from-[#ff00a0] to-[#9b5de5] rounded-xl text-xs font-orbitron font-black text-white uppercase tracking-wider shadow-[0_0_15px_rgba(255,0,160,0.4)] hover:shadow-[0_0_25px_rgba(255,0,160,0.7)] transition-all cursor-pointer"
+                >
+                  Acceder
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
