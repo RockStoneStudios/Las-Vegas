@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Orbitron, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
-import Navbar from "@/app/components/Navbar"; 
+import Navbar from "@/app/components/Navbar";
 import { MesaProvider } from "@/lib/context/MesaContext";
 import { PanelControlProvider } from "@/lib/context/PanelControlContext";
 import { WebSocketListener } from "@/app/components/WebSocketListener";
@@ -19,7 +19,9 @@ const spaceGrotesk = Space_Grotesk({
   variable: '--font-space',
 });
 
-// Configuración del Viewport para móviles y PWA
+// ⚠️ IMPORTANTE: Cambia esto por tu dominio real de producción
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://lasvegasdiscobar.netlify.app";
+
 export const viewport: Viewport = {
   themeColor: "#060413",
   width: "device-width",
@@ -27,9 +29,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-// SEO Potente y Optimizado
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://lasvegasdiscobar.com"),
+  metadataBase: new URL(BASE_URL),
   title: {
     default: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
     template: "%s | Las Vegas Discobar",
@@ -55,46 +56,49 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  
-  // Íconos y Logo de la App
+
+  // ✅ Íconos correctos (revisa el nombre exacto del archivo en /public)
   icons: {
     icon: [
-      { url: "/lasvesgas-logo.PNG" },
-      { url: "/lasvesgas-logo.PNG", type: "image/png" },
+      { url: "/lasvegas-logo.PNG", type: "image/png" },
+      { url: "/lasvegas-logo.PNG", sizes: "32x32", type: "image/png" },
+      { url: "/lasvegas-logo.PNG", sizes: "192x192", type: "image/png" },
     ],
-    shortcut: ["/lasvesgas-logo.PNG"],
+    shortcut: ["/lasvegas-logo.PNG"],
     apple: [
-      { url: "/lasvesgas-logo.PNG", sizes: "180x180", type: "image/png" },
+      { url: "/lasvegas-logo.PNG", sizes: "180x180", type: "image/png" },
     ],
   },
 
-  // Open Graph (WhatsApp, Facebook, LinkedIn)
+  // ✅ Open Graph (WhatsApp, Facebook, LinkedIn)
   openGraph: {
     type: "website",
     locale: "es_CO",
-    url: "https://lasvegasdiscobar.com",
+    url: BASE_URL,
     title: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
     description: "¡La mejor rumba de Sopetrán está aquí! Interactúa desde tu mesa, pide tus canciones favoritas y gana premios en la ruleta.",
     siteName: "Las Vegas Discobar",
     images: [
       {
-        url: "/lasvesgas-logo.PNG",
+        url: "/lasvegas-logo.PNG", // ⬅️ Asegúrate que este archivo exista en /public
         width: 1200,
         height: 630,
         alt: "Las Vegas Discobar Sopetrán - Logo Oficial",
+        type: "image/png",
       },
     ],
   },
 
-  // Twitter Cards
+  // ✅ Twitter Cards
   twitter: {
     card: "summary_large_image",
     title: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
     description: "Vive la rumba interactiva en Sopetrán. Pide canciones, participa en ruletas de premios y disfruta la noche.",
-    images: ["/lasvesgas-logo.PNG"],
+    images: ["/lasvegas-logo.PNG"],
+    creator: "@lasvegasdiscobar",
   },
 
-  // Indexación para buscadores
+  // ✅ Robots
   robots: {
     index: true,
     follow: true,
@@ -106,6 +110,14 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+
+  // ✅ Verificación para Search Console (opcional pero recomendado)
+  verification: {
+    google: "TU_CODIGO_DE_VERIFICACION_DE_GOOGLE", // ⬅️ Añade el tuyo si lo tienes
+  },
+
+  // ✅ Categoría del sitio
+  category: "entertainment",
 };
 
 export default function RootLayout({
@@ -125,7 +137,6 @@ export default function RootLayout({
             <main className="grow pt-20 flex flex-col">
               {children}
             </main>
-            {/* ✅ Escucha eventos de WebSocket en TODA la app */}
             <WebSocketListener />
           </PanelControlProvider>
         </MesaProvider>
