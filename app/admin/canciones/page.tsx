@@ -19,9 +19,12 @@ export default function AdminCancionesPage() {
   const [solicitudes, setSolicitudes] = useState<SolicitudCancion[]>([]);
   const [cargando, setCargando] = useState(true);
 
+  const obtenerSesionAdmin = () =>
+    localStorage.getItem('admin_session_id') || localStorage.getItem('admin_sessionId');
+
   // ✅ Verificar sesión de Admin
   useEffect(() => {
-    const sessionId = localStorage.getItem('admin_session_id');
+    const sessionId = obtenerSesionAdmin();
     if (!sessionId) {
       router.replace('/admin/login');
     }

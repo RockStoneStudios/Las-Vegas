@@ -19,6 +19,9 @@ export default function AdminSolicitudesPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [notificaciones, setNotificaciones] = useState(0);
 
+  const obtenerSesionAdmin = () =>
+    localStorage.getItem('admin_session_id') || localStorage.getItem('admin_sessionId');
+
   // 🔔 Función para obtener el contador
   const obtenerContadorPendientes = async () => {
     try {
@@ -68,7 +71,7 @@ export default function AdminSolicitudesPage() {
   // ✅ 1. INICIALIZAR SESIÓN
   useEffect(() => {
     const inicializarSesion = async () => {
-      const sessionId = localStorage.getItem('admin_session_id');
+      const sessionId = obtenerSesionAdmin();
       
       if (!sessionId) {
         router.replace('/admin/login');
@@ -147,7 +150,7 @@ export default function AdminSolicitudesPage() {
 
   // ✅ 3. ATENDER MESA
   const handleAtender = async (idAlerta: string, mesa: number) => {
-    const sessionId = localStorage.getItem('admin_session_id');
+    const sessionId = obtenerSesionAdmin();
 
     if (!sessionId) return;
 

@@ -22,7 +22,7 @@ export default function PanelMeseroPage() {
   useEffect(() => {
     const inicializarSesion = async () => {
       // 🟢 El mesero usa la sesión del Admin (guardada como 'admin_session_id')
-      let sessionId = localStorage.getItem('admin_session_id');
+      const sessionId = localStorage.getItem('admin_session_id') || localStorage.getItem('admin_sessionId');
       
       // Si no hay sesión de Admin, redirige al login
       if (!sessionId) {

@@ -38,6 +38,7 @@ export default function LoginAdminPage() {
 
       // 1. Guardamos la sesión
       localStorage.setItem('admin_session_id', tokenSesion);
+      localStorage.setItem('admin_sessionId', tokenSesion);
 
       // 2. Redirigimos a /admin y forzamos refresco de ruta
       router.replace('/admin');

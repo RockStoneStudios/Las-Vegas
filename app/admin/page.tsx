@@ -47,6 +47,9 @@ export default function PaginaAdmin() {
   
   const { enviarMensaje, mensajeWS, conectarSocket, conectado } = useSocketStore();
 
+  const obtenerSesionAdmin = () =>
+    localStorage.getItem('admin_session_id') || localStorage.getItem('admin_sessionId');
+
   // 🔒 Validación de PIN para entrar a Premios
   const handleValidarPin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +78,7 @@ export default function PaginaAdmin() {
 
   // ✅ CONECTAR WEBSOCKET DEL ADMIN
   useEffect(() => {
-    const sesionGuardada = localStorage.getItem('admin_sessionId') || localStorage.getItem('admin_session_id');
+    const sesionGuardada = obtenerSesionAdmin();
     
     if (!sesionGuardada) {
       router.replace('/admin/login');
@@ -254,7 +257,7 @@ export default function PaginaAdmin() {
   };
 
   const handleCerrarMesa = async (numeroMesa: number) => {
-    const sessionId = localStorage.getItem('admin_sessionId');
+    const sessionId = obtenerSesionAdmin();
     
     if (!sessionId) {
       alert('❌ No hay sesión activa. Inicia sesión nuevamente.');
@@ -290,6 +293,7 @@ export default function PaginaAdmin() {
   };
 
   function cerrarSesion() {
+    localStorage.removeItem('admin_session_id');
     localStorage.removeItem('admin_sessionId');
     router.replace('/admin/login');
   }
