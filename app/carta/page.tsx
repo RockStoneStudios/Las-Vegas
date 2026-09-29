@@ -15,8 +15,9 @@ const MENU_DATA = [
       { id: 101, name: 'Pilsen', description: 'Cerveza clásica, suave y refrescante.', price: '$5,000' },
       { id: 102, name: 'Negra', description: 'Cerveza oscura con notas de caramelo y café.', price: '$5,000' },
       { id: 103, name: 'Light', description: 'Cerveza ligera con bajo contenido calórico.', price: '$5,500' },
-      { id: 104, name: 'Club Colombia', description: 'Cerveza premium, sabor suave y equilibrado.', price: '$6,000' },
-      { id: 105, name: 'Corona', description: 'Cerveza clara de origen mexicano, muy refrescante.', price: '$8,000' },
+      { id: 104, name: 'Club Colombia', description: 'Cerveza premium, sabor suave y equilibrado.', price: '$8,000' },
+      { id: 105, name: 'Corona', description: 'Cerveza clara de origen mexicano, muy refrescante.', price: '$10,000' },
+      { id: 105, name: 'Coronita', description: 'Cerveza clara de origen mexicano, muy refrescante.', price: '$8,000' },
     ]
   },
   {
@@ -26,11 +27,11 @@ const MENU_DATA = [
     borderColor: 'border-amber-200',
     items: [
       { id: 201, name: 'Media Antioqueño', description: 'Aguardiente antioqueño, media botella.', price: '$60.000' },
-      { id: 202, name: 'Litro Antioqueño', description: 'Aguardiente antioqueño, botella completa.', price: '$140.000' },
-      { id: 203, name: 'Garrafa Antioqueño', description: 'Aguardiente antioqueño, garrafa de 3 litros.', price: '$180.000' },
-      { id: 204, name: 'Media Amarillo', description: 'Aguardiente Amarillo, media botella.', price: '$70.000' },
-      { id: 205, name: 'Litro Amarillo', description: 'Aguardiente Amarillo, botella completa.', price: '$140.000' },
-      { id: 206, name: 'Garrafa Amarillo', description: 'Aguardiente Amarillo, garrafa de 3 litros.', price: '$180.000' },
+      { id: 202, name: 'Litro Antioqueño', description: 'Aguardiente antioqueño, botella completa.', price: '$130.000' },
+      { id: 203, name: 'Garrafa Antioqueño', description: 'Aguardiente antioqueño, garrafa de 3 litros.', price: '$220.000' },
+      { id: 204, name: 'Media Amarillo', description: 'Aguardiente Amarillo, media botella.', price: '$60.000' },
+      { id: 205, name: 'Litro Amarillo', description: 'Aguardiente Amarillo, botella completa.', price: '$130.000' },
+      { id: 206, name: 'Garrafa Amarillo', description: 'Aguardiente Amarillo, garrafa de 3 litros.', price: '$220.000' },
     ]
   },
   {
@@ -39,7 +40,7 @@ const MENU_DATA = [
     color: 'text-amber-600',
     borderColor: 'border-amber-600',
     items: [
-      { id: 301, name: 'Ron Medellín Añejo', description: 'Ron añejo de la casa, suave al paladar.', price: '$35,000' },
+      { id: 301, name: 'Ron Medellín Añejo', description: 'Ron añejo de la casa, suave al paladar.', price: '$60,000' },
       { id: 302, name: 'Ron Medellín 8 Años', description: 'Edición limitada, 8 años de maduración.', price: '$70,000' },
       { id: 303, name: 'Ron Medellín 12 Años', description: 'Premium, 12 años de envejecimiento.', price: '$120,000' },
     ]

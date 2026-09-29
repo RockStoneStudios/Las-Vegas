@@ -100,9 +100,9 @@ function NavbarContent() {
       colorClass: 'text-[#00f3ff] drop-shadow-[0_0_8px_#00f3ff,0_0_20px_#00f3ff] hover:drop-shadow-[0_0_15px_#00f3ff,0_0_35px_#00f3ff]' 
     },
     { 
-      nombre: 'Tu canción', 
-      url: '/tu-cancion',
-      requiereMesa: true,
+      nombre: 'Reservas', 
+      url: '/reservas',
+      requiereMesa: false,
       colorClass: 'text-[#ff00a0] drop-shadow-[0_0_8px_#ff00a0,0_0_20px_#ff00a0] hover:drop-shadow-[0_0_15px_#ff00a0,0_0_35px_#ff00a0]' 
     },
     { 
