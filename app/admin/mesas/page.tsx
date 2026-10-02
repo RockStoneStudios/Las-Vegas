@@ -6,7 +6,7 @@ import { Plus, Save, Trash2, Move, Layout, Users, Disc } from 'lucide-react';
 interface IMesa {
   id: string;
   numero: string;
-  tipo: 'MESA' | 'BARRA' | 'ESCENARIO' | 'VIP' | 'PISTA_BAILE';
+  tipo: 'MESA' | 'BARRA' | 'ESCENARIO' | 'VIP' | 'PISTA_BAILE' | 'BANO';
   capacidad: number;
   posX: number;
   posY: number;
@@ -26,7 +26,7 @@ export default function AdminMesasPage() {
   // Formulario para crear nueva mesa o elemento
   const [nuevaMesa, setNuevaMesa] = useState({
     numero: '',
-    tipo: 'MESA' as 'MESA' | 'BARRA' | 'ESCENARIO' | 'VIP' | 'PISTA_BAILE',
+    tipo: 'MESA' as 'MESA' | 'BARRA' | 'ESCENARIO' | 'VIP' | 'PISTA_BAILE' | 'BANO',
     capacidad: 4,
   });
 
@@ -62,7 +62,6 @@ export default function AdminMesasPage() {
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!draggedMesaId) return;
 
-    // Calcular nuevas coordenadas dentro del contenedor
     const newX = Math.max(0, e.clientX - dragOffset.x);
     const newY = Math.max(0, e.clientY - dragOffset.y);
 
@@ -115,9 +114,7 @@ export default function AdminMesasPage() {
     e.preventDefault();
 
     if (!nuevaMesa.numero.trim()) {
-      alert(
-        'Ingresa un número o nombre para el elemento (Ej: Pista Principal, Mesa 5)'
-      );
+      alert('Ingresa un número o nombre para el elemento (Ej: Pista Principal, Mesa 5)');
       return;
     }
 
@@ -135,8 +132,11 @@ export default function AdminMesasPage() {
       initialWidth = 120;
       initialHeight = 120;
     } else if (nuevaMesa.tipo === 'PISTA_BAILE') {
-      initialWidth = 240; // 💃 Pista de baile más espaciosa
+      initialWidth = 240;
       initialHeight = 160;
+    } else if (nuevaMesa.tipo === 'BANO') {
+      initialWidth = 100;
+      initialHeight = 100;
     }
 
     try {
@@ -156,8 +156,6 @@ export default function AdminMesasPage() {
 
       if (res.ok) {
         const creada = await res.json();
-
-        // Normalizar el ID retornado por la base de datos
         const mesaFormateada = {
           ...creada,
           id: creada.id || creada._id,
@@ -166,8 +164,9 @@ export default function AdminMesasPage() {
         setMesas((prev) => [...prev, mesaFormateada]);
         setNuevaMesa({ numero: '', tipo: 'MESA', capacidad: 4 });
       } else {
-        const err = await res.json();
-        alert(`Error al crear elemento: ${err.error || 'Respuesta no válida'}`);
+        const err = await res.json().catch(() => ({}));
+        console.error('❌ Error del backend:', err);
+        alert(`Error al crear elemento: ${err.error || err.message || JSON.stringify(err) || 'Respuesta no válida'}`);
       }
     } catch (error) {
       console.error('Error creando mesa/elemento:', error);
@@ -200,6 +199,8 @@ export default function AdminMesasPage() {
         return 'bg-purple-950/60 border-purple-500 text-purple-200 font-bold uppercase tracking-widest';
       case 'PISTA_BAILE':
         return 'bg-pink-950/40 border-pink-500/80 text-pink-300 font-bold uppercase tracking-wider border-dashed shadow-pink-500/20';
+      case 'BANO':
+        return 'bg-slate-800/60 border-slate-400 text-slate-200 shadow-slate-400/20';
       default:
         return 'bg-zinc-800 border-zinc-600 text-zinc-100';
     }
@@ -237,16 +238,12 @@ export default function AdminMesasPage() {
 
           <form onSubmit={crearMesa} className="space-y-3">
             <div>
-              <label className="text-xs text-zinc-400">
-                Identificador / Número
-              </label>
+              <label className="text-xs text-zinc-400">Identificador / Número</label>
               <input
                 type="text"
                 placeholder="Ej: Mesa 1, Pista Principal, VIP 2"
                 value={nuevaMesa.numero}
-                onChange={(e) =>
-                  setNuevaMesa({ ...nuevaMesa, numero: e.target.value })
-                }
+                onChange={(e) => setNuevaMesa({ ...nuevaMesa, numero: e.target.value })}
                 className="w-full mt-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-500 text-white"
               />
             </div>
@@ -268,13 +265,12 @@ export default function AdminMesasPage() {
                 <option value="BARRA">Barra</option>
                 <option value="ESCENARIO">Escenario / DJ</option>
                 <option value="PISTA_BAILE">Pista de Baile 💃</option>
+                <option value="BANO">Baño 🚻</option>
               </select>
             </div>
 
             <div>
-              <label className="text-xs text-zinc-400">
-                Capacidad / Aforo Estimado
-              </label>
+              <label className="text-xs text-zinc-400">Capacidad / Aforo Estimado</label>
               <input
                 type="number"
                 value={nuevaMesa.capacidad}
@@ -332,6 +328,7 @@ export default function AdminMesasPage() {
                   <div className="flex justify-between items-center">
                     <span className="font-bold text-xs truncate flex items-center gap-1">
                       {mesa.tipo === 'PISTA_BAILE' && <Disc size={12} className="animate-spin" />}
+                      {mesa.tipo === 'BANO' && '🚻 '}
                       {mesa.numero}
                     </span>
                     <button

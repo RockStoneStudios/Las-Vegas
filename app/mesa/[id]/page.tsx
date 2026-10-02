@@ -111,22 +111,34 @@ export default function PageMesaCliente() {
         const urlParams = new URLSearchParams(window.location.search);
         const tokenMesa = urlParams.get('token');
 
-        let sessionIdObtenido = localStorage.getItem('mesa_sessionId');
+        const sessionStorageKey = `lasvegas_mesa_${numeroMesa}_session_id`;
+        let sessionIdObtenido: string | null = localStorage.getItem(sessionStorageKey);
 
         if (tokenMesa) {
-          try {
-            const res = await fetch(`${API_URL}/api/auth/mesa/${numeroMesa}?token=${tokenMesa}`);
-            if (res.ok) {
-              const data = await res.json();
-              if (data?.sessionId) {
-                sessionIdObtenido = data.sessionId as string;
-                localStorage.setItem('mesa_sessionId', sessionIdObtenido);
-                localStorage.setItem('mesa_numero', String(numeroMesa));
-              }
-            }
-          } catch (fetchErr) {
-            console.warn('⚠️ Error fetching token', fetchErr);
+          const deviceId = obtenerDeviceId();
+
+          const params = new URLSearchParams({
+            token: tokenMesa,
+            deviceId,
+          });
+
+          const res = await fetch(
+            `${API_URL}/api/auth/mesa/${numeroMesa}?${params.toString()}`
+          );
+
+          if (!res.ok) {
+            throw new Error('No fue posible validar el acceso a esta mesa');
           }
+
+          const data = await res.json();
+          const sessionIdServidor = data?.sessionId;
+
+          if (typeof sessionIdServidor !== 'string' || !sessionIdServidor) {
+            throw new Error('El servidor no devolvió una sesión válida');
+          }
+
+          sessionIdObtenido = sessionIdServidor;
+          localStorage.setItem(sessionStorageKey, sessionIdServidor);
         }
 
         if (!sessionIdObtenido) {
@@ -160,10 +172,11 @@ export default function PageMesaCliente() {
       if (mesaEvento && Number(mesaEvento) !== Number(numeroMesa)) {
         return;
       }
-      console.log('🔴 [CLIENTE] La mesa ha sido cerrada/limpiada');
+      console.log('🔴 [CLIENTE] La mesa ha sido cerrada');
       setMesaLimpiada(true);
-      localStorage.removeItem('mesa_sessionId');
-      localStorage.removeItem('mesa_numero');
+      localStorage.removeItem(`lasvegas_mesa_${numeroMesa}_session_id`);
+      localStorage.removeItem('mesa_sessionId'); // opcional: sesiones antiguas
+
       return;
     }
 
@@ -485,4 +498,17 @@ export default function PageMesaCliente() {
       </div>
     </main>
   );
+}
+
+
+function obtenerDeviceId() {
+  const key = 'lasvegas_device_id';
+  let deviceId = localStorage.getItem(key);
+
+  if (!deviceId) {
+    deviceId = crypto.randomUUID();
+    localStorage.setItem(key, deviceId);
+  }
+
+  return deviceId;
 }
