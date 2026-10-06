@@ -10,6 +10,7 @@ import { useGSAP } from '@gsap/react';
 import { useSocketStore } from '@/lib/store/useSocketStore';
 import { useRouter } from 'next/navigation';
 import { Music, Gamepad2, Martini } from 'lucide-react';
+import Loader from './components/Loader';
 
 const COLORES_LUCES = ['#22d3ee', '#ff3ea5', '#9b5de5', '#fbbf24', '#34d399', '#f472b6'];
 
@@ -461,7 +462,11 @@ function HeroSectionContent() {
 
 export default function HeroSection() {
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
+    <Suspense fallback={
+       <div className="w-full min-h-[60vh] flex items-center justify-center">
+         <Loader />
+       </div>
+    }>
       <HeroSectionContent />
     </Suspense>
   );

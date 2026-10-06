@@ -14,21 +14,34 @@
   --font-mono: var(--font-geist-mono);
   --font-orbitron: var(--font-orbitron);
   --font-space: var(--font-space);
+
+  /* Animación personalizada para el Loader */
+  --animate-spin-reverse: spin-reverse 1.5s linear infinite;
 }
 
-/* 3. Aplicamos las variables al body (Tailwind v4 ya no usa 'var(--background)' directo en el body, así que lo dejamos así) */
+/* 3. Aplicamos las variables al body */
 body {
-  background-color: #020106; /* Forzamos el color negro */
+  background-color: #020106;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* 4. Tus clases de fuentes personalizadas */
+/* 4. Clases de fuentes personalizadas */
 @layer base {
   .font-orbitron {
     font-family: var(--font-orbitron), sans-serif;
   }
   .font-space {
     font-family: var(--font-space), sans-serif;
+  }
+}
+
+/* 5. Keyframes para el Loader */
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
   }
 }
