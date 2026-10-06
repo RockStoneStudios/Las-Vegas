@@ -3,21 +3,38 @@
   "short_name": "Las Vegas",
   "description": "La Mejor Rumba en Sopetrán 🍹🔥",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#060413",
   "theme_color": "#060413",
+  "lang": "es-CO",
+  "dir": "ltr",
+  "categories": ["entertainment", "disco", "nightlife"],
   "icons": [
     {
-      "src": "/lasvegas-logo.PNG",
+      "src": "/icon1.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/lasvegas-logo.PNG",
+      "src": "/icon1.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon0.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon0.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

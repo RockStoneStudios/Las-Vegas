@@ -26,6 +26,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -34,18 +35,19 @@ export const metadata: Metadata = {
     default: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
     template: "%s | Las Vegas Discobar",
   },
-  description: "Vive la mejor experiencia nocturna en Sopetrán. Escanea el QR de tu mesa, pide canciones en vivo, participa en sorteos, concursos y disfruta la mejor rumba de la región.",
+  description:
+    "Vive la mejor experiencia nocturna en Sopetrán. Escanea el QR de tu mesa, pide canciones en vivo, participa en sorteos, concursos y disfruta la mejor rumba de la región.",
   keywords: [
     "Las Vegas Discobar", "Rumba en Sopetrán", "Discotecas en Sopetrán",
     "Sopetrán Antioquia", "Fiesta Sopetrán", "Bares en Sopetrán",
     "Música en vivo Sopetrán", "Turismo Sopetrán", "Nightlife Sopetrán",
-    "Ruleta de premios discoteca"
+    "Ruleta de premios discoteca",
   ],
   authors: [{ name: "Las Vegas Discobar" }],
   creator: "Las Vegas Discobar",
   publisher: "Las Vegas Discobar",
-  
-  // 📱 Vinculación crucial de PWA Manifest
+
+  // 📱 PWA Manifest
   manifest: "/manifest.json",
 
   appleWebApp: {
@@ -54,16 +56,16 @@ export const metadata: Metadata = {
     title: "Las Vegas",
   },
 
+  // 🖼️ Iconos — apuntando a los archivos reales de /public
   icons: {
     icon: [
-      { url: "/lasvegas-logo.PNG", type: "image/png" },
-      { url: "/lasvegas-logo.PNG", sizes: "32x32", type: "image/png" },
-      { url: "/lasvegas-logo.PNG", sizes: "192x192", type: "image/png" },
-      { url: "/lasvegas-logo.PNG", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.png", type: "image/png", sizes: "any" },
+      { url: "/icon1.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon0.png", type: "image/png", sizes: "512x512" },
     ],
-    shortcut: ["/lasvegas-logo.PNG"],
+    shortcut: ["/favicon.png"],
     apple: [
-      { url: "/lasvegas-logo.PNG", sizes: "180x180", type: "image/png" },
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
 
@@ -72,11 +74,12 @@ export const metadata: Metadata = {
     locale: "es_CO",
     url: BASE_URL,
     title: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
-    description: "¡La mejor rumba de Sopetrán está aquí! Interactúa desde tu mesa, pide tus canciones favoritas y gana premios en la ruleta.",
+    description:
+      "¡La mejor rumba de Sopetrán está aquí! Interactúa desde tu mesa, pide tus canciones favoritas y gana premios en la ruleta.",
     siteName: "Las Vegas Discobar",
     images: [
       {
-        url: "/lasvegas-logo.PNG",
+        url: "/icon0.png",
         width: 1200,
         height: 630,
         alt: "Las Vegas Discobar Sopetrán - Logo Oficial",
@@ -88,8 +91,9 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
-    description: "Vive la rumba interactiva en Sopetrán. Pide canciones, participa en ruletas de premios y disfruta la noche.",
-    images: ["/lasvegas-logo.PNG"],
+    description:
+      "Vive la rumba interactiva en Sopetrán. Pide canciones, participa en ruletas de premios y disfruta la noche.",
+    images: ["/icon0.png"],
     creator: "@lasvegasdiscobar",
   },
 
@@ -110,18 +114,11 @@ export default function RootLayout({
       lang="es"
       className={`${orbitron.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
-      <head>
-        {/* Meta etiquetas nativas para asegurar el ícono en iOS Safari al 'Añadir a pantalla de inicio' */}
-        <link rel="apple-touch-icon" href="/lasvegas-logo.PNG" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-      </head>
       <body className="min-h-full flex flex-col bg-[#060413] text-white selection:bg-[#ff00a0] selection:text-white">
         <MesaProvider>
           <PanelControlProvider>
             <Navbar />
-            <main className="grow pt-20 flex flex-col">
-              {children}
-            </main>
+            <main className="grow pt-20 flex flex-col">{children}</main>
             <WebSocketListener />
           </PanelControlProvider>
         </MesaProvider>
