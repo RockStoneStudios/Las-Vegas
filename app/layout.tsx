@@ -19,7 +19,6 @@ const spaceGrotesk = Space_Grotesk({
   variable: '--font-space',
 });
 
-// ⚠️ IMPORTANTE: Cambia esto por tu dominio real de producción
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://lasvegasdiscobar.netlify.app";
 
 export const viewport: Viewport = {
@@ -37,32 +36,30 @@ export const metadata: Metadata = {
   },
   description: "Vive la mejor experiencia nocturna en Sopetrán. Escanea el QR de tu mesa, pide canciones en vivo, participa en sorteos, concursos y disfruta la mejor rumba de la región.",
   keywords: [
-    "Las Vegas Discobar",
-    "Rumba en Sopetrán",
-    "Discotecas en Sopetrán",
-    "Sopetrán Antioquia",
-    "Fiesta Sopetrán",
-    "Bares en Sopetrán",
-    "Música en vivo Sopetrán",
-    "Turismo Sopetrán",
-    "Nightlife Sopetrán",
+    "Las Vegas Discobar", "Rumba en Sopetrán", "Discotecas en Sopetrán",
+    "Sopetrán Antioquia", "Fiesta Sopetrán", "Bares en Sopetrán",
+    "Música en vivo Sopetrán", "Turismo Sopetrán", "Nightlife Sopetrán",
     "Ruleta de premios discoteca"
   ],
   authors: [{ name: "Las Vegas Discobar" }],
   creator: "Las Vegas Discobar",
   publisher: "Las Vegas Discobar",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
+  
+  // 📱 Vinculación crucial de PWA Manifest
+  manifest: "/manifest.json",
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Las Vegas",
   },
 
-  // ✅ Íconos correctos (revisa el nombre exacto del archivo en /public)
   icons: {
     icon: [
       { url: "/lasvegas-logo.PNG", type: "image/png" },
       { url: "/lasvegas-logo.PNG", sizes: "32x32", type: "image/png" },
       { url: "/lasvegas-logo.PNG", sizes: "192x192", type: "image/png" },
+      { url: "/lasvegas-logo.PNG", sizes: "512x512", type: "image/png" },
     ],
     shortcut: ["/lasvegas-logo.PNG"],
     apple: [
@@ -70,7 +67,6 @@ export const metadata: Metadata = {
     ],
   },
 
-  // ✅ Open Graph (WhatsApp, Facebook, LinkedIn)
   openGraph: {
     type: "website",
     locale: "es_CO",
@@ -80,7 +76,7 @@ export const metadata: Metadata = {
     siteName: "Las Vegas Discobar",
     images: [
       {
-        url: "/lasvegas-logo.PNG", // ⬅️ Asegúrate que este archivo exista en /public
+        url: "/lasvegas-logo.PNG",
         width: 1200,
         height: 630,
         alt: "Las Vegas Discobar Sopetrán - Logo Oficial",
@@ -89,7 +85,6 @@ export const metadata: Metadata = {
     ],
   },
 
-  // ✅ Twitter Cards
   twitter: {
     card: "summary_large_image",
     title: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
@@ -98,25 +93,10 @@ export const metadata: Metadata = {
     creator: "@lasvegasdiscobar",
   },
 
-  // ✅ Robots
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
   },
-
-  // ✅ Verificación para Search Console (opcional pero recomendado)
-  verification: {
-    google: "TU_CODIGO_DE_VERIFICACION_DE_GOOGLE", // ⬅️ Añade el tuyo si lo tienes
-  },
-
-  // ✅ Categoría del sitio
   category: "entertainment",
 };
 
@@ -130,6 +110,11 @@ export default function RootLayout({
       lang="es"
       className={`${orbitron.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
+      <head>
+        {/* Meta etiquetas nativas para asegurar el ícono en iOS Safari al 'Añadir a pantalla de inicio' */}
+        <link rel="apple-touch-icon" href="/lasvegas-logo.PNG" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+      </head>
       <body className="min-h-full flex flex-col bg-[#060413] text-white selection:bg-[#ff00a0] selection:text-white">
         <MesaProvider>
           <PanelControlProvider>
