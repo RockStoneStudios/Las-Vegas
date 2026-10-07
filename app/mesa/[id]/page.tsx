@@ -22,16 +22,22 @@ export default function PageMesaCliente() {
   const params = useParams();
   const router = useRouter();
   const numeroMesa = Number(params?.id) || 1;
-  
+
   // 🔌 Store de WebSocket
-  const { conectarSocket, enviarMensaje, mensajeWS, conectado } = useSocketStore();
+  const {
+    conectarSocket,
+    enviarMensaje,
+    mensajeWS,
+    conectado,
+    meseroBloqueado,        // 🆕
+    setMeseroBloqueado,     // 🆕
+  } = useSocketStore();
 
   // ========== ESTADOS COMPARTIDOS ==========
   const [sessionIdActiva, setSessionIdActiva] = useState<string | null>(null);
   const [cargandoSesion, setCargandoSesion] = useState<boolean>(true);
   const [errorSesion, setErrorSesion] = useState<string | null>(null);
   const [mesaLimpiada, setMesaLimpiada] = useState<boolean>(false);
-  const [meseroEnCamino, setMeseroEnCamino] = useState<boolean>(false);
   const [juegosDesbloqueados, setJuegosDesbloqueados] = useState<string[]>([]);
   const [seccionActiva, setSeccionActiva] = useState<'inicio' | 'juegos_privados' | 'votaciones' | 'cancion' | 'ruleta-premios'>('inicio');
   const [votacionActiva, setVotacionActiva] = useState<any>(null);
@@ -60,42 +66,38 @@ export default function PageMesaCliente() {
   const [cancionInput, setCancionInput] = useState('');
   const [autorInput, setAutorInput] = useState('');
 
-  // ========== REDIRECCIÓN AUTOMÁTICA AL CERRAR MESA ==========
-    // ========== ANIMACIÓN NEÓN CON GSAP ==========
-  // ========== ANIMACIÓN NEÓN CON GSAP ==========
   // ========== REDIRECCIÓN AUTOMÁTICA Y ANIMACIÓN GSAP ==========
   useEffect(() => {
     if (mesaLimpiada) {
       // 1. Iniciar la animación del neón (letras y barra)
       const ctx = gsap.context(() => {
-        gsap.fromTo(".neon-letter", 
+        gsap.fromTo(".neon-letter",
           { opacity: 0, textShadow: "0 0 0px rgba(255,255,255,0)" },
-          { 
-            opacity: 1, 
-            textShadow: "0 0 10px rgba(120,200,255,0.8), 0 0 20px rgba(120,200,255,0.6), 0 0 30px rgba(59,130,246,0.4)", 
-            stagger: 0.08, 
+          {
+            opacity: 1,
+            textShadow: "0 0 10px rgba(120,200,255,0.8), 0 0 20px rgba(120,200,255,0.6), 0 0 30px rgba(59,130,246,0.4)",
+            stagger: 0.08,
             duration: 0.5,
             ease: "power2.out"
           }
         );
 
-        gsap.fromTo(".neon-progress", 
+        gsap.fromTo(".neon-progress",
           { boxShadow: "0 0 5px rgba(59,130,246,0.5)" },
-          { 
-            boxShadow: "0 0 15px rgba(59,130,246,0.8), 0 0 30px rgba(59,130,246,0.5)", 
-            duration: 1, 
-            yoyo: true, 
+          {
+            boxShadow: "0 0 15px rgba(59,130,246,0.8), 0 0 30px rgba(59,130,246,0.5)",
+            duration: 1,
+            yoyo: true,
             repeat: -1
           }
         );
       });
 
-      // 2. Redirigir después de 9 segundos (9000 ms)
+      // 2. Redirigir después de 9 segundos
       const timer = setTimeout(() => {
-        router.push('/'); // Redirige a la raíz
+        router.push('/');
       }, 9000);
 
-      // 3. Limpiar tanto la animación como el timer
       return () => {
         clearTimeout(timer);
         ctx.revert();
@@ -158,6 +160,29 @@ export default function PageMesaCliente() {
     if (numeroMesa) obtenerSesionYConectar();
   }, [numeroMesa, conectarSocket]);
 
+  // 🆕 RE-SYNC: Consultar si la mesa ya tiene solicitud pendiente al montar
+  useEffect(() => {
+    if (!numeroMesa) return;
+
+    const verificarEstadoMesero = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/mesero/estado/${numeroMesa}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.bloqueado) {
+          console.log('🔒 [RE-SYNC] Mesa tiene solicitud de mesero pendiente');
+          setMeseroBloqueado(true);
+        } else {
+          setMeseroBloqueado(false);
+        }
+      } catch (e) {
+        console.warn('⚠️ [RE-SYNC] No se pudo verificar estado del mesero:', e);
+      }
+    };
+
+    verificarEstadoMesero();
+  }, [numeroMesa, setMeseroBloqueado]);
+
   // ========== EVENTOS WEBSOCKET ==========
   useEffect(() => {
     if (!mensajeWS) return;
@@ -174,31 +199,47 @@ export default function PageMesaCliente() {
       }
       console.log('🔴 [CLIENTE] La mesa ha sido cerrada');
       setMesaLimpiada(true);
+      // 🆕 Desbloquear mesero también
+      setMeseroBloqueado(false);
       localStorage.removeItem(`lasvegas_mesa_${numeroMesa}_session_id`);
-      localStorage.removeItem('mesa_sessionId'); // opcional: sesiones antiguas
+      localStorage.removeItem('mesa_sessionId');
 
       return;
     }
 
-    // 🎵 NUEVO: Evento del modo "Pedir Canción"
+    // 🎵 Evento del modo "Pedir Canción"
     if (tipo === 'EVENT:MODO_PEDIR_CANCION') {
       console.log('🎵 [CLIENTE] Modo Pedir Canción cambiado a:', payload.activo);
       setPedirCancionActivo(payload.activo);
       return;
     }
 
-    // ✅ 1. MESERO EN CAMINO - Resetear botón
-    if (tipo === 'EVENT:MESERO_EN_CAMINO') {
-      setMeseroEnCamino(false);
+    // 🆕 MESERO SOLICITADO → BLOQUEAR EL BOTÓN
+    if (tipo === 'EVENT:MESERO_SOLICITADO') {
+      const mesaEvento = payload.mesa;
+      if (Number(mesaEvento) === Number(numeroMesa)) {
+        console.log('🔒 [CLIENTE] Mesero solicitado, bloqueando botón');
+        setMeseroBloqueado(true);
+      }
       return;
     }
 
-    // ✅ 2. LLAMADO ATENDIDO - Resetear botón
+    // 🆕 MESERO ATENDIDO → DESBLOQUEAR EL BOTÓN
+    if (tipo === 'EVENT:MESERO_ATENDIDO') {
+      const mesaEvento = payload.mesa;
+      if (Number(mesaEvento) === Number(numeroMesa)) {
+        console.log('🔓 [CLIENTE] Mesero atendido, desbloqueando botón');
+        setMeseroBloqueado(false);
+      }
+      return;
+    }
+
+    // ✅ Compatibilidad: LLAMADO ATENDIDO (por si el backend emite los dos)
     const eventosAtendido = ['EVENT:LLAMADO_ATENDIDO', 'ACTION:CANCELAR_LLAMADO', 'EVENT:LLAMADO_CANCELADO', 'EVENT:MESERO_ATENDIO', 'ACTION:ATENDER_MESA', 'EVENT:ATENDER_MESA', 'EVENT:MESA_ATENDIDA'];
     if (eventosAtendido.includes(tipo)) {
       const mesaAtendida = payload.mesa ?? payload.numeroMesa;
       if (Number(mesaAtendida) === Number(numeroMesa) || !mesaAtendida) {
-        setMeseroEnCamino(false);
+        setMeseroBloqueado(false);
       }
     }
 
@@ -219,7 +260,7 @@ export default function PageMesaCliente() {
       setMesaGanadoraTarget(ganadora);
       setDuracionGiroWS(duracion);
       setAnimando(true);
-      
+
       if (ganadora === numeroMesa) {
         setJuegosDesbloqueados((prev) => {
           if (!prev.includes('ruleta-premios')) {
@@ -235,20 +276,20 @@ export default function PageMesaCliente() {
       console.log('🎮 [CLIENTE] Juego desbloqueado:', payload);
       const juegoId = payload.juegoId;
       const mesaDestino = payload.mesa;
-      
+
       if (Number(mesaDestino) !== Number(numeroMesa)) {
         return;
       }
-      
+
       setJuegosDesbloqueados((prev) => {
         if (!prev.includes(juegoId)) {
           return [...prev, juegoId];
         }
         return prev;
       });
-      
+
       setSeccionActiva('juegos_privados');
-      
+
       if (juegoId === 'ruleta-premios') {
         console.log('🎰 [CLIENTE] Ruleta de premios desbloqueada!');
       }
@@ -289,13 +330,20 @@ export default function PageMesaCliente() {
       }
     }
 
-  }, [mensajeWS, numeroMesa, seccionActiva, router, sessionIdActiva, juegosDesbloqueados]);
+  }, [mensajeWS, numeroMesa, seccionActiva, router, sessionIdActiva, juegosDesbloqueados, setMeseroBloqueado]);
 
   // ========== FUNCIONES ==========
-  const handleLlamarMesero = () => {
-    if (meseroEnCamino || !sessionIdActiva) return;
-    setMeseroEnCamino(true);
-    enviarMensaje({ tipo: 'ACTION:SOLICITAR_ATENCION', payload: { mesa: numeroMesa, sessionId: sessionIdActiva } });
+  const handleLlamarMesero = async () => {
+    if (meseroBloqueado || !sessionIdActiva) return;
+
+    // 🔥 Bloqueo optimista: bloquear al instante en el frontend
+    setMeseroBloqueado(true);
+
+    // Enviar por WS
+    enviarMensaje({
+      tipo: 'ACTION:SOLICITAR_ATENCION',
+      payload: { mesa: numeroMesa, sessionId: sessionIdActiva }
+    });
   };
 
   const handleVotar = (opcionId: number) => {
@@ -304,7 +352,7 @@ export default function PageMesaCliente() {
     enviarMensaje({ tipo: 'ACTION:VOTAR_OPCION', payload: { votacionId: votacionActiva.id, opcionId } });
   };
 
-  // 🎵 NUEVA FUNCIÓN: Enviar la canción al backend
+  // 🎵 Enviar la canción al backend
   const handleEnviarCancion = async () => {
     if (!cancionInput.trim() || !autorInput.trim()) {
       alert('Por favor, escribe el nombre de la canción y el autor.');
@@ -347,66 +395,62 @@ export default function PageMesaCliente() {
   };
 
   if (mesaLimpiada) {
-  return (
-    <div className="fixed inset-0 z-[9999] bg-[#020106] flex items-center justify-center p-6">
-      {/* Fondo con gradiente Neon Punk sin amarillo */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-[#05010d] via-[#020106] to-[#0a0120]" />
-      
-      {/* Luces neón de fondo (Violeta y Azul Eléctrico) */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-48 h-48 bg-[#a855f7]/25 blur-[90px] rounded-full" />
-        <div className="absolute bottom-10 right-10 w-48 h-48 bg-[#3b82f6]/25 blur-[90px] rounded-full" />
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-[#ec4899]/20 blur-[60px] rounded-full" />
-      </div>
-      
-      {/* Modal de despedida (Acentos en violeta y rosa neón) */}
-      <div className="relative z-10 max-w-sm w-full bg-[#0d0722] border border-[#a855f7]/40 rounded-3xl p-8 text-center shadow-[0_0_60px_rgba(168,85,247,0.25)] backdrop-blur-xl">
-        
-        {/* LOGO GRANDE CON EFECTO NEÓN */}
-        <div className="mb-6 flex justify-center">
-          <Image
-            src="/lasvesgas-logo.PNG"
-            alt="Las Vegas Discobar"
-            width={256}
-            height={256}
-            className="w-64 h-auto object-contain drop-shadow-[0_0_35px_rgba(168,85,247,0.8)]"
-          />
+    return (
+      <div className="fixed inset-0 z-[9999] bg-[#020106] flex items-center justify-center p-6">
+        {/* Fondo con gradiente Neon Punk sin amarillo */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#05010d] via-[#020106] to-[#0a0120]" />
+
+        {/* Luces neón de fondo (Violeta y Azul Eléctrico) */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-10 left-10 w-48 h-48 bg-[#a855f7]/25 blur-[90px] rounded-full" />
+          <div className="absolute bottom-10 right-10 w-48 h-48 bg-[#3b82f6]/25 blur-[90px] rounded-full" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-[#ec4899]/20 blur-[60px] rounded-full" />
         </div>
-        
-        {/* Texto de despedida */}
-        <h2 className="font-orbitron font-black text-2xl text-[#d8b4fe] uppercase tracking-widest mb-4">
-          ¡Muchas Gracias!
-        </h2>
-        <p className="text-[#60a5fa] font-space text-base mb-4">
-          Por habernos acompañado.
-        </p>
-       <p className="text-white font-space text-base mb-6">
-  Te esperamos el próximo fin de semana en 
-  <span className="block font-orbitron font-bold mt-1 text-xl">
-    {"Las Vegas Discobar".split("").map((letra, i) => (
-      <span key={i} className="neon-letter text-[#60a5fa] inline-block">
-        {letra}
-      </span>
-    ))}
-  </span>
-</p>
-        {/* Barra de progreso de 9 segundos (Violeta a Azul) */}
-        { }
-        {/* Barra de progreso de 9 segundos (Neón Blanco Azulado) */}
-        <div className="w-full bg-[#1f1645] h-2 rounded-full overflow-hidden mb-6">
-          <div className="neon-progress h-full bg-gradient-to-r from-[#60a5fa] to-[#3b82f6] animate-progress-bar" />
+
+        {/* Modal de despedida */}
+        <div className="relative z-10 max-w-sm w-full bg-[#0d0722] border border-[#a855f7]/40 rounded-3xl p-8 text-center shadow-[0_0_60px_rgba(168,85,247,0.25)] backdrop-blur-xl">
+
+          <div className="mb-6 flex justify-center">
+            <Image
+              src="/lasvesgas-logo.PNG"
+              alt="Las Vegas Discobar"
+              width={256}
+              height={256}
+              className="w-64 h-auto object-contain drop-shadow-[0_0_35px_rgba(168,85,247,0.8)]"
+            />
+          </div>
+
+          <h2 className="font-orbitron font-black text-2xl text-[#d8b4fe] uppercase tracking-widest mb-4">
+            ¡Muchas Gracias!
+          </h2>
+          <p className="text-[#60a5fa] font-space text-base mb-4">
+            Por habernos acompañado.
+          </p>
+          <p className="text-white font-space text-base mb-6">
+            Te esperamos el próximo fin de semana en
+            <span className="block font-orbitron font-bold mt-1 text-xl">
+              {"Las Vegas Discobar".split("").map((letra, i) => (
+                <span key={i} className="neon-letter text-[#60a5fa] inline-block">
+                  {letra}
+                </span>
+              ))}
+            </span>
+          </p>
+
+          <div className="w-full bg-[#1f1645] h-2 rounded-full overflow-hidden mb-6">
+            <div className="neon-progress h-full bg-gradient-to-r from-[#60a5fa] to-[#3b82f6] animate-progress-bar" />
+          </div>
+
+          <button
+            onClick={() => router.push('/')}
+            className="w-full py-3 bg-gradient-to-r from-[#a855f7] to-[#3b82f6] rounded-xl font-orbitron font-black text-xs text-white uppercase tracking-widest hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] transition-all active:scale-95"
+          >
+            Volver al Inicio
+          </button>
         </div>
-        {/* Botón manual (Neón Violeta) */}
-        <button 
-          onClick={() => router.push('/')}
-          className="w-full py-3 bg-gradient-to-r from-[#a855f7] to-[#3b82f6] rounded-xl font-orbitron font-black text-xs text-white uppercase tracking-widest hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] transition-all active:scale-95"
-        >
-          Volver al Inicio
-        </button>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   // 🚀 RENDER PRINCIPAL
   return (
@@ -417,7 +461,7 @@ export default function PageMesaCliente() {
       <MesaHeader numeroMesa={numeroMesa} sessionId={sessionIdActiva} />
 
       <div className="relative z-10 w-full max-w-md flex-1 flex flex-col gap-4 mt-4">
-        
+
         {/* 🎰 RULETA DE MESAS */}
         {animando ? (
           <div className="w-full flex flex-col items-center gap-4">
@@ -459,24 +503,28 @@ export default function PageMesaCliente() {
         ) : (
           <>
             {/* 2. BOTÓN LLAMAR MESERO */}
-            <LlamarMeseroBtn onClick={handleLlamarMesero} disabled={meseroEnCamino} enCamino={meseroEnCamino} />
+            <LlamarMeseroBtn
+              onClick={handleLlamarMesero}
+              disabled={meseroBloqueado}
+              enCamino={meseroBloqueado}
+            />
 
             {/* 3. PANEL DE REACCIONES */}
             <PanelReacciones enviarMensaje={enviarMensaje} />
 
             {/* 4. MENÚ DE OPCIONES */}
-            <MenuOpciones 
-              juegosDesbloqueados={juegosDesbloqueados} 
+            <MenuOpciones
+              juegosDesbloqueados={juegosDesbloqueados}
               numeroMesa={numeroMesa}
               sessionId={sessionIdActiva}
               pedirCancionActivo={pedirCancionActivo}
-              onSelect={(seccion) => setSeccionActiva(seccion)} 
+              onSelect={(seccion) => setSeccionActiva(seccion)}
             />
           </>
         )}
 
-        {/* 5. MODALES (AHORA CON LAS PROPS DE LAS CANCIONES Y PREMIOS) */}
-        <ModalesMesa 
+        {/* 5. MODALES */}
+        <ModalesMesa
           seccionActiva={seccionActiva}
           onClose={() => setSeccionActiva('inicio')}
           juegosDesbloqueados={juegosDesbloqueados}
@@ -486,9 +534,7 @@ export default function PageMesaCliente() {
           tiempoRestante={tiempoRestante}
           yaVoto={yaVoto}
           onVotar={handleVotar}
-          // 🎁 PROPS PARA LA RULETA DE PREMIOS
           premiosRuleta={premiosRuleta}
-          // 🎵 NUEVAS PROPS PARA CANCIONES
           cancionInput={cancionInput}
           setCancionInput={setCancionInput}
           autorInput={autorInput}

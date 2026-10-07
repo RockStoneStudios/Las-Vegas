@@ -15,15 +15,21 @@ interface SocketState {
   sessionId: string | null;
   mesa: number | null;
   rol: string | null;
-  
+
   juegoDesbloqueado: string | null;
   animacionRuleta: PayloadRuletaGirar | null;
   mensajeWS: { tipo: string; payload?: any } | null;
+
+  // 🆕 Estado global de "mesero bloqueado" por mesa
+  meseroBloqueado: boolean;
 
   conectarSocket: (sessionId: string, mesa?: number | null, rol?: string | null) => void;
   desconectarSocket: () => void;
   enviarMensaje: (tipoOrData: string | Record<string, any>, payload?: Record<string, any>) => void;
   limpiarAnimacionRuleta: () => void;
+
+  // 🆕 Acción para bloquear/desbloquear manualmente
+  setMeseroBloqueado: (bloqueado: boolean) => void;
 }
 
 export const useSocketStore = create<SocketState>((set, get) => ({
@@ -35,6 +41,9 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   juegoDesbloqueado: null,
   animacionRuleta: null,
   mensajeWS: null,
+
+  // 🆕 Estado inicial del bloqueo
+  meseroBloqueado: false,
 
   conectarSocket: (newSessionId: string, mesa: number | null = null, rol: string | null = null) => {
     console.log(`🔌 [STORE] conectarSocket:`, { newSessionId, mesa, rol });
@@ -69,8 +78,9 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       }
     }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:3001';
-const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;    console.log(`🔌 [STORE] Conectando a: ${wsUrl}`);
+    const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:3001';
+    const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;
+    console.log(`🔌 [STORE] Conectando a: ${wsUrl}`);
 
     const ws = new WebSocket(wsUrl);
     set({ socket: ws, sessionId: newSessionId, mesa, rol, conectado: false });
@@ -92,6 +102,25 @@ const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;    console.log(`🔌 [S
         if (data.tipo === 'EVENT:RULETA_GIRAR' || data.tipo === 'ACTION:GIRAR_RULETA') {
           set({ animacionRuleta: data.payload });
         }
+
+        // 🆕 Escuchar eventos de mesero
+        if (data.tipo === 'EVENT:MESERO_SOLICITADO') {
+          if (data.payload?.mesa === get().mesa) {
+            console.log('🚫 [STORE] Mesero solicitado, bloqueando botón');
+            set({ meseroBloqueado: true });
+          }
+        }
+        if (data.tipo === 'EVENT:MESERO_ATENDIDO') {
+          if (data.payload?.mesa === get().mesa) {
+            console.log('✅ [STORE] Mesero atendido, desbloqueando botón');
+            set({ meseroBloqueado: false });
+          }
+        }
+        if (data.tipo === 'EVENT:MESA_CERRADA') {
+          console.log('🚪 [STORE] Mesa cerrada, desbloqueando botón');
+          set({ meseroBloqueado: false });
+        }
+
       } catch (error) {
         console.warn('⚠️ Error procesando mensaje:', error);
       }
@@ -99,12 +128,12 @@ const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;    console.log(`🔌 [S
 
     ws.onclose = (event) => {
       console.log(`❌ [STORE] WebSocket CERRADO | Código: ${event.code} | Razón: ${event.reason || 'Sin razón'}`);
-      
+
       if (event.code === 1006) {
         const sessionIdActual = get().sessionId;
         const mesaActual = get().mesa;
         const rolActual = get().rol;
-        
+
         if (sessionIdActual) {
           console.log(`🔄 [STORE] Reintentando en 2 segundos...`);
           setTimeout(() => {
@@ -115,12 +144,11 @@ const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;    console.log(`🔌 [S
           }, 2000);
         }
       }
-      
+
       set({ socket: null, conectado: false });
     };
 
     ws.onerror = (error) => {
-      // 🔥 SOLO MOSTRAMOS WARNING SI EL ESTADO NO ES CLOSED (3)
       if (ws.readyState !== 3) {
         console.warn('⚠️ [STORE] Error en WebSocket (readyState:', ws.readyState, ')');
       }
@@ -165,4 +193,7 @@ const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;    console.log(`🔌 [S
   },
 
   limpiarAnimacionRuleta: () => set({ animacionRuleta: null }),
+
+  // 🆕 Acción para bloquear/desbloquear manualmente
+  setMeseroBloqueado: (bloqueado) => set({ meseroBloqueado: bloqueado }),
 }));
