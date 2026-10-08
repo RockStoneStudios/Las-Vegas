@@ -17,6 +17,20 @@ export interface MensajeWS {
   payload?: any;
 }
 
+export interface OpcionVotacion {
+  id: number;
+  texto: string;
+  votos: number;
+}
+
+export interface VotacionActiva {
+  id: string;
+  pregunta: string;
+  opciones: OpcionVotacion[];
+  /** Momento local (Date.now()) en que termina la votación */
+  finalizaEn: number;
+}
+
 type ListenerWS = (data: MensajeWS) => void;
 
 interface SocketState {
@@ -32,6 +46,11 @@ interface SocketState {
 
   meseroBloqueado: boolean;
 
+  // Estado persistente (sobrevive aunque el componente se monte tarde)
+  votacionActiva: VotacionActiva | null;
+  modoPedirCancion: boolean;
+  estadoInicialRecibido: boolean;
+
   conectarSocket: (sessionId: string, mesa?: number | null, rol?: string | null) => void;
   desconectarSocket: () => void;
   restaurarSesion: () => void;
@@ -39,6 +58,9 @@ interface SocketState {
   limpiarAnimacionRuleta: () => void;
 
   setMeseroBloqueado: (bloqueado: boolean) => void;
+
+  sincronizarEstado: () => void;
+  limpiarVotacion: () => void;
 }
 
 // =============================================================
@@ -131,6 +153,24 @@ const soltarHandlers = (ws: WebSocket) => {
   ws.onclose = null;
 };
 
+/**
+ * Convierte el payload del servidor en VotacionActiva.
+ * Acepta `duracion` (EVENT:VOTACION_EXPRES_START) o
+ * `duracionRestante` (EVENT:VOTACION_ACTIVA_SYNC / ESTADO_INICIAL),
+ * ambos en segundos.
+ */
+const normalizarVotacion = (p: any): VotacionActiva | null => {
+  if (!p || !p.id) return null;
+  const segundos = Number(p.duracionRestante ?? p.duracion ?? 0);
+  if (segundos <= 0) return null;
+  return {
+    id: p.id,
+    pregunta: p.pregunta,
+    opciones: Array.isArray(p.opciones) ? p.opciones : [],
+    finalizaEn: Date.now() + segundos * 1000,
+  };
+};
+
 const armarWatchdog = (ws: WebSocket) => {
   if (watchdog) clearTimeout(watchdog);
   watchdog = setTimeout(() => {
@@ -208,6 +248,9 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   animacionRuleta: null,
   mensajeWS: null,
   meseroBloqueado: false,
+  votacionActiva: null,
+  modoPedirCancion: false,
+  estadoInicialRecibido: false,
 
   conectarSocket: (newSessionId: string, mesa: number | null = null, rol: string | null = null) => {
     if (!newSessionId || newSessionId === 'undefined' || newSessionId === 'null') {
@@ -280,6 +323,58 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         set({ mensajeWS: data }); // compatibilidad con código existente
         emitir(data);             // sistema de listeners (no pierde mensajes)
 
+        // ---------------------------------------------------------
+        // ESTADO PERSISTENTE (votaciones / pedir canción)
+        // ---------------------------------------------------------
+        switch (data.tipo) {
+          // Al conectar o reconectar. votacionActiva null limpia votaciones ya terminadas.
+          case 'EVENT:ESTADO_INICIAL':
+              console.log('🧪 [STORE] ESTADO_INICIAL', data.payload, '→', normalizarVotacion(data.payload?.votacionActiva));
+            set({
+              votacionActiva: normalizarVotacion(data.payload?.votacionActiva),
+              modoPedirCancion: !!data.payload?.modoPedirCancion,
+              estadoInicialRecibido: true,
+            });
+            break;
+
+          // Sincronización con tiempo restante exacto (llega justo después del ESTADO_INICIAL)
+          case 'EVENT:VOTACION_ACTIVA_SYNC': {
+            const v = normalizarVotacion(data.payload);
+            if (v) set({ votacionActiva: v });
+            break;
+          }
+
+          // Se abre una votación nueva
+          case 'EVENT:VOTACION_EXPRES_START': {
+            const v = normalizarVotacion(data.payload);
+            if (v) set({ votacionActiva: v });
+            break;
+          }
+
+          // Actualización de conteo de votos (throttle 500ms en el servidor)
+          case 'EVENT:VOTACION_ACTUALIZADA': {
+            const actual = get().votacionActiva;
+            if (actual && actual.id === data.payload?.id) {
+              set({ votacionActiva: { ...actual, opciones: data.payload.opciones } });
+            }
+            break;
+          }
+
+          // La votación terminó
+          case 'EVENT:VOTACION_CERRADA': {
+            const actual = get().votacionActiva;
+            if (!actual || actual.id === data.payload?.id) {
+              set({ votacionActiva: null });
+            }
+            break;
+          }
+
+          case 'EVENT:PEDIR_CANCION_ESTADO':
+            // Ajusta al nombre real que emite InteraccionesService.toggleModoPedirCancion
+            set({ modoPedirCancion: !!(data.payload?.activo ?? data.payload) });
+            break;
+        }
+
         if (data.tipo === 'EVENT:JUEGO_PRIVADO_DESBLOQUEADO') {
           set({ juegoDesbloqueado: data.payload.juegoId });
         }
@@ -340,7 +435,16 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         socket.close(1000, 'Desconexión manual');
       } catch {}
     }
-    set({ socket: null, conectado: false, sessionId: null, mesa: null, rol: null });
+    set({
+      socket: null,
+      conectado: false,
+      sessionId: null,
+      mesa: null,
+      rol: null,
+      votacionActiva: null,
+      modoPedirCancion: false,
+      estadoInicialRecibido: false,
+    });
   },
 
   // Llamar UNA vez desde un componente raíz (layout) para recuperar la sesión
@@ -378,6 +482,12 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
   limpiarAnimacionRuleta: () => set({ animacionRuleta: null }),
   setMeseroBloqueado: (bloqueado) => set({ meseroBloqueado: bloqueado }),
+
+  // Pide al servidor el estado actual (votación, pedir canción)
+  sincronizarEstado: () => {
+    get().enviarMensaje('ACTION:SOLICITAR_ESTADO');
+  },
+  limpiarVotacion: () => set({ votacionActiva: null }),
 }));
 
 // =============================================================
