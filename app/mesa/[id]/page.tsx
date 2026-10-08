@@ -33,6 +33,10 @@ export default function PageMesaCliente() {
     setMeseroBloqueado,     // 🆕
   } = useSocketStore();
 
+  // 🆕 Votación activa que viene del store (se llena con ESTADO_INICIAL,
+  // VOTACION_ACTIVA_SYNC y VOTACION_EXPRES_START -> cubre entrada tardía y reconexión)
+  const votacionDelStore = useSocketStore((s) => s.votacionActiva);
+
   // ========== ESTADOS COMPARTIDOS ==========
   const [sessionIdActiva, setSessionIdActiva] = useState<string | null>(null);
   const [cargandoSesion, setCargandoSesion] = useState<boolean>(true);
@@ -187,37 +191,38 @@ export default function PageMesaCliente() {
 
     verificarEstadoMesero();
   }, [numeroMesa, setMeseroBloqueado]);
+
   // 🆕 RE-SYNC: consultar si el modo pedir canción está activo al entrar
-useEffect(() => {
-  if (!numeroMesa) return;
+  useEffect(() => {
+    if (!numeroMesa) return;
 
-  const verificarModoCanciones = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/canciones/modo-activo`);
-      if (!res.ok) return;
-      const data = await res.json();
-      
-      console.log('🎵 [RE-SYNC] Modo pedir canción activo:', data.activo);
-      setPedirCancionActivo(data.activo);
+    const verificarModoCanciones = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/canciones/modo-activo`);
+        if (!res.ok) return;
+        const data = await res.json();
 
-      // Si está activo, consultar el cupo de la mesa también
-      if (data.activo) {
-        const resCupo = await fetch(`${API_URL}/api/canciones/estado-mesa/${numeroMesa}`);
-        if (resCupo.ok) {
-          const cupo = await resCupo.json();
-          setCancionesUsadas(cupo.usadas ?? 0);
-          setCancionesLimite(cupo.limite ?? 2);
-          setCancionesRestantes(cupo.restantes ?? 2);
-          console.log('🎵 [RE-SYNC] Cupo de la mesa:', cupo);
+        console.log('🎵 [RE-SYNC] Modo pedir canción activo:', data.activo);
+        setPedirCancionActivo(data.activo);
+
+        // Si está activo, consultar el cupo de la mesa también
+        if (data.activo) {
+          const resCupo = await fetch(`${API_URL}/api/canciones/estado-mesa/${numeroMesa}`);
+          if (resCupo.ok) {
+            const cupo = await resCupo.json();
+            setCancionesUsadas(cupo.usadas ?? 0);
+            setCancionesLimite(cupo.limite ?? 2);
+            setCancionesRestantes(cupo.restantes ?? 2);
+            console.log('🎵 [RE-SYNC] Cupo de la mesa:', cupo);
+          }
         }
+      } catch (e) {
+        console.warn('⚠️ [RE-SYNC] No se pudo verificar modo canciones:', e);
       }
-    } catch (e) {
-      console.warn('⚠️ [RE-SYNC] No se pudo verificar modo canciones:', e);
-    }
-  };
+    };
 
-  verificarModoCanciones();
-}, [numeroMesa]);
+    verificarModoCanciones();
+  }, [numeroMesa]);
 
   // 🆕 CONSULTAR CUPO DE CANCIONES AL ABRIR EL MODAL
   useEffect(() => {
@@ -238,6 +243,58 @@ useEffect(() => {
 
     consultarCupo();
   }, [seccionActiva, numeroMesa]);
+
+  // =============================================================
+  // 🆕 SYNC DE VOTACIÓN DESDE EL STORE (ENTRADA TARDÍA / RECONEXIÓN)
+  // =============================================================
+  // El store se llena con EVENT:ESTADO_INICIAL, EVENT:VOTACION_ACTIVA_SYNC
+  // y EVENT:VOTACION_EXPRES_START. Al reaccionar al estado del store (y no
+  // al orden de los mensajes), quien entre tarde entra directo a votaciones
+  // si la votación sigue activa.
+  useEffect(() => {
+    if (!votacionDelStore) return;
+
+    const segundos = Math.max(
+      0,
+      Math.round((votacionDelStore.finalizaEn - Date.now()) / 1000)
+    );
+    if (segundos <= 0) return; // ya terminó, no navegar
+
+    setVotacionActiva({
+      id: votacionDelStore.id,
+      pregunta: votacionDelStore.pregunta,
+      opciones: votacionDelStore.opciones,
+      duracion: segundos,
+    });
+    setVotacionIniciada(true);
+    setYaVoto(false);
+    setTiempoRestante(segundos);
+    setSeccionActiva('votaciones');
+  }, [votacionDelStore]);
+
+  // 🆕 COUNTDOWN: cierra la votación automáticamente cuando se acaba el tiempo
+  // (clave para quienes entraron tarde: el modal se cierra solo aunque el
+  // EVENT:VOTACION_CERRADA se haya perdido mientras estaban offline)
+  useEffect(() => {
+    if (!votacionIniciada || tiempoRestante <= 0) return;
+
+    const timer = setInterval(() => {
+      setTiempoRestante((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setVotacionIniciada(false);
+          setVotacionActiva(null);
+          setYaVoto(false);
+          setSeccionActiva((s) => (s === 'votaciones' ? 'inicio' : s));
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+    // OJO: no incluir tiempoRestante en deps, o el intervalo se reinicia cada segundo
+  }, [votacionIniciada]);
 
   // ========== EVENTOS WEBSOCKET ==========
   useEffect(() => {
