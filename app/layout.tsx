@@ -6,6 +6,7 @@ import Navbar from "@/app/components/Navbar";
 import { MesaProvider } from "@/lib/context/MesaContext";
 import { PanelControlProvider } from "@/lib/context/PanelControlContext";
 import { WebSocketListener } from "@/app/components/WebSocketListener";
+import SocketRestorer from "./components/SocketRestorer";
 
 const orbitron = Orbitron({
   subsets: ['latin'],
@@ -120,6 +121,7 @@ export default function RootLayout({
             <Navbar />
             <main className="grow pt-20 flex flex-col">{children}</main>
             <WebSocketListener />
+            <SocketRestorer />
           </PanelControlProvider>
         </MesaProvider>
       </body>

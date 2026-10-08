@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 
+// =============================================================
+// TIPOS
+// =============================================================
 interface PayloadRuletaGirar {
   indiceGanador: number;
   premio: string;
@@ -8,6 +11,13 @@ interface PayloadRuletaGirar {
   ejecutadoPorMesa: number;
   esPremioMayor?: boolean;
 }
+
+export interface MensajeWS {
+  tipo: string;
+  payload?: any;
+}
+
+type ListenerWS = (data: MensajeWS) => void;
 
 interface SocketState {
   socket: WebSocket | null;
@@ -18,18 +28,176 @@ interface SocketState {
 
   juegoDesbloqueado: string | null;
   animacionRuleta: PayloadRuletaGirar | null;
-  mensajeWS: { tipo: string; payload?: any } | null;
+  mensajeWS: MensajeWS | null;
 
   meseroBloqueado: boolean;
 
   conectarSocket: (sessionId: string, mesa?: number | null, rol?: string | null) => void;
   desconectarSocket: () => void;
+  restaurarSesion: () => void;
   enviarMensaje: (tipoOrData: string | Record<string, any>, payload?: Record<string, any>) => void;
   limpiarAnimacionRuleta: () => void;
 
   setMeseroBloqueado: (bloqueado: boolean) => void;
 }
 
+// =============================================================
+// CONFIGURACIÓN
+// =============================================================
+const DEBUG = process.env.NODE_ENV !== 'production';
+const log = (...args: any[]) => {
+  if (DEBUG) console.log(...args);
+};
+
+// Si no llega NINGÚN mensaje (el PING del servidor cuenta) en este tiempo,
+// el socket se considera muerto ("zombi") y se reconecta.
+// IMPORTANTE: debe ser MAYOR que el intervalo de PING de tu servidor
+// (servidor cada 25s -> watchdog 60s).
+const WATCHDOG_MS = 60_000;
+
+// Si la pestaña estuvo oculta más de esto, no confiamos en el estado del socket.
+const OCULTO_MAX_MS = 5_000;
+
+// Códigos de cierre del servidor con los que NO se debe reintentar:
+// 4001 = falta sessionId, 4002 = sesión inválida.
+// OJO: 4003 = "Heartbeat timeout" SÍ debe reintentar (pasa al volver de segundo plano).
+const NO_RECONECTAR = [4001, 4002];
+
+const STORAGE_KEY = 'ws_session';
+
+// =============================================================
+// ESTADO DE MÓDULO (fuera de React/Zustand)
+// =============================================================
+let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+let watchdog: ReturnType<typeof setTimeout> | null = null;
+let reconnectAttempts = 0;
+let ocultoDesde = 0;
+
+// Sistema de listeners: a diferencia de `mensajeWS`, NO pierde mensajes
+// cuando llegan varios seguidos (reacciones, votos, etc.).
+const listeners = new Map<string, Set<ListenerWS>>();
+
+/**
+ * Suscribe un callback a un tipo de mensaje ('*' = todos).
+ * Devuelve la función para cancelar la suscripción (úsala en el cleanup de useEffect).
+ *
+ * Mensaje local especial: 'LOCAL:SOCKET_CONECTADO' se emite cada vez que
+ * el socket abre (incluye reconexiones) -> úsalo para re-sincronizar estado
+ * (votación activa, modo pedir canción, etc.).
+ */
+export const suscribirMensaje = (tipo: string, cb: ListenerWS) => {
+  if (!listeners.has(tipo)) listeners.set(tipo, new Set());
+  listeners.get(tipo)!.add(cb);
+  return () => {
+    listeners.get(tipo)?.delete(cb);
+  };
+};
+
+const emitir = (data: MensajeWS) => {
+  listeners.get(data.tipo)?.forEach((cb) => {
+    try {
+      cb(data);
+    } catch (e) {
+      console.warn('⚠️ Error en listener WS:', e);
+    }
+  });
+  listeners.get('*')?.forEach((cb) => {
+    try {
+      cb(data);
+    } catch (e) {
+      console.warn('⚠️ Error en listener WS (*):', e);
+    }
+  });
+};
+
+// =============================================================
+// HELPERS
+// =============================================================
+const limpiarTimers = () => {
+  if (reconnectTimeout) {
+    clearTimeout(reconnectTimeout);
+    reconnectTimeout = null;
+  }
+  if (watchdog) {
+    clearTimeout(watchdog);
+    watchdog = null;
+  }
+};
+
+const soltarHandlers = (ws: WebSocket) => {
+  ws.onopen = null;
+  ws.onerror = null;
+  ws.onmessage = null;
+  ws.onclose = null;
+};
+
+const armarWatchdog = (ws: WebSocket) => {
+  if (watchdog) clearTimeout(watchdog);
+  watchdog = setTimeout(() => {
+    // En segundo plano los timers/mensajes se pausan: no es un fallo real.
+    // Al volver a la pestaña, el listener de visibilitychange se encarga.
+    if (typeof document !== 'undefined' && document.hidden) {
+      armarWatchdog(ws);
+      return;
+    }
+    log('🧟 [STORE] Watchdog: sin mensajes, forzando reconexión');
+    forzarReconexion(ws);
+  }, WATCHDOG_MS);
+};
+
+const forzarReconexion = (ws: WebSocket) => {
+  const { socket, sessionId, mesa, rol, conectarSocket } = useSocketStore.getState();
+  if (socket !== ws) return; // ya es otro socket
+
+  soltarHandlers(ws);
+  try {
+    ws.close();
+  } catch {}
+
+  if (watchdog) clearTimeout(watchdog);
+  useSocketStore.setState({ socket: null, conectado: false });
+
+  if (sessionId) conectarSocket(sessionId, mesa, rol);
+};
+
+const programarReconexion = () => {
+  const { sessionId } = useSocketStore.getState();
+  if (!sessionId) return;
+
+  // Sin red: esperamos al evento 'online' en vez de gastar reintentos
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    log('📴 [STORE] Sin red, esperando evento online');
+    return;
+  }
+
+  // Backoff exponencial (máx 5s) con jitter para no reconectar todos a la vez
+  const base = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 5000);
+  const delay = base / 2 + Math.random() * (base / 2);
+  log(`🔄 [STORE] Reintentando en ${(delay / 1000).toFixed(1)}s (intento ${reconnectAttempts + 1})`);
+
+  if (reconnectTimeout) clearTimeout(reconnectTimeout);
+  reconnectTimeout = setTimeout(() => {
+    reconnectAttempts++;
+    const { sessionId, mesa, rol, conectarSocket } = useSocketStore.getState();
+    if (sessionId) conectarSocket(sessionId, mesa, rol);
+  }, delay);
+};
+
+const guardarSesion = (sessionId: string, mesa: number | null, rol: string | null) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sessionId, mesa, rol }));
+  } catch {}
+};
+
+const borrarSesion = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {}
+};
+
+// =============================================================
+// STORE
+// =============================================================
 export const useSocketStore = create<SocketState>((set, get) => ({
   socket: null,
   conectado: false,
@@ -42,8 +210,6 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   meseroBloqueado: false,
 
   conectarSocket: (newSessionId: string, mesa: number | null = null, rol: string | null = null) => {
-    console.log(`🔌 [STORE] conectarSocket:`, { newSessionId, mesa, rol });
-
     if (!newSessionId || newSessionId === 'undefined' || newSessionId === 'null') {
       console.warn('⚠️ SessionId inválido');
       return;
@@ -51,46 +217,59 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
     const { socket, conectado, sessionId: currentSessionId } = get();
 
+    // Ya conectado y saludable
     if (socket && conectado && socket.readyState === WebSocket.OPEN && currentSessionId === newSessionId) {
-      console.log('🟢 [STORE] Ya conectado con este sessionId, ignorando...');
       return;
     }
 
+    // Ya conectando con la misma sesión
     if (socket && socket.readyState === WebSocket.CONNECTING && currentSessionId === newSessionId) {
-      console.log('🔄 [STORE] Ya está conectando, ignorando...');
       return;
     }
 
-    if (socket && currentSessionId !== newSessionId) {
+    // Limpiar socket previo (cambió de sesión o estaba roto)
+    if (socket) {
+      soltarHandlers(socket);
       try {
-        socket.onopen = null;
-        socket.onerror = null;
-        socket.onmessage = null;
-        socket.onclose = null;
-        socket.close(1000, 'Cambiando de sesión');
-        console.log('🔌 [STORE] Cerrando socket anterior (cambio de sesión)');
-      } catch (e) {
-        console.warn('⚠️ Error cerrando socket:', e);
-      }
+        socket.close();
+      } catch {}
     }
+
+    limpiarTimers();
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:3001';
-    const wsUrl = `${API_URL}/ws?sessionId=${newSessionId}`;
-    console.log(`🔌 [STORE] Conectando a: ${wsUrl}`);
+    const wsUrl = `${API_URL}/ws?sessionId=${encodeURIComponent(newSessionId)}`;
+    log(`🔌 [STORE] Conectando a: ${wsUrl}`);
 
     const ws = new WebSocket(wsUrl);
     set({ socket: ws, sessionId: newSessionId, mesa, rol, conectado: false });
+    guardarSesion(newSessionId, mesa, rol);
 
     ws.onopen = () => {
-      console.log(`✅ [STORE] WebSocket CONECTADO | ID: ${newSessionId}`);
+      if (get().socket !== ws) return;
+      log(`✅ [STORE] WebSocket CONECTADO | ID: ${newSessionId}`);
+      reconnectAttempts = 0;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      armarWatchdog(ws);
       set({ conectado: true });
+
+      // Aviso local: úsalo para re-sincronizar estado tras reconectar
+      emitir({ tipo: 'LOCAL:SOCKET_CONECTADO' });
     };
 
     ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      if (get().socket !== ws) return;
 
-        // 🔥 HEARTBEAT: responder PING del servidor
+      // Cualquier mensaje (incluido PING) = la conexión está viva
+      armarWatchdog(ws);
+
+      try {
+        const data: MensajeWS = JSON.parse(event.data);
+
+        // HEARTBEAT: responder PING del servidor
         if (data.tipo === 'PING') {
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ tipo: 'PONG' }));
@@ -98,8 +277,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
           return;
         }
 
-        console.log('📩 [STORE] Mensaje recibido:', data.tipo);
-        set({ mensajeWS: data });
+        set({ mensajeWS: data }); // compatibilidad con código existente
+        emitir(data);             // sistema de listeners (no pierde mensajes)
 
         if (data.tipo === 'EVENT:JUEGO_PRIVADO_DESBLOQUEADO') {
           set({ juegoDesbloqueado: data.payload.juegoId });
@@ -110,93 +289,130 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
         if (data.tipo === 'EVENT:MESERO_SOLICITADO') {
           if (data.payload?.mesa === get().mesa) {
-            console.log('🚫 [STORE] Mesero solicitado, bloqueando botón');
             set({ meseroBloqueado: true });
           }
         }
-        if (data.tipo === 'EVENT:MESERO_ATENDIDO') {
+        if (data.tipo === 'EVENT:MESERO_ATENDIDO' || data.tipo === 'EVENT:MESA_CERRADA') {
           if (data.payload?.mesa === get().mesa) {
-            console.log('✅ [STORE] Mesero atendido, desbloqueando botón');
             set({ meseroBloqueado: false });
           }
         }
-        if (data.tipo === 'EVENT:MESA_CERRADA') {
-          console.log('🚪 [STORE] Mesa cerrada, desbloqueando botón');
-          set({ meseroBloqueado: false });
-        }
-
       } catch (error) {
         console.warn('⚠️ Error procesando mensaje:', error);
       }
     };
 
     ws.onclose = (event) => {
-      console.log(`❌ [STORE] WebSocket CERRADO | Código: ${event.code} | Razón: ${event.reason || 'Sin razón'}`);
+      if (watchdog) clearTimeout(watchdog);
 
-      if (event.code === 1006) {
-        const sessionIdActual = get().sessionId;
-        const mesaActual = get().mesa;
-        const rolActual = get().rol;
+      // Un socket viejo no debe pisar al nuevo
+      if (get().socket !== ws) return;
 
-        if (sessionIdActual) {
-          console.log(`🔄 [STORE] Reintentando en 2 segundos...`);
-          setTimeout(() => {
-            const state = get();
-            if (!state.conectado && state.sessionId) {
-              state.conectarSocket(sessionIdActual, mesaActual, rolActual);
-            }
-          }, 2000);
-        }
+      log(`❌ [STORE] WebSocket CERRADO | Código: ${event.code} | Razón: ${event.reason || 'Sin razón'}`);
+      set({ socket: null, conectado: false });
+
+      if (NO_RECONECTAR.includes(event.code)) {
+        log('⛔ [STORE] Cierre definitivo, no se reintenta');
+        if (event.code === 4002) borrarSesion();
+        return;
       }
 
-      set({ socket: null, conectado: false });
+      programarReconexion();
     };
 
-    ws.onerror = (error) => {
-      if (ws.readyState !== 3) {
+    ws.onerror = () => {
+      if (DEBUG && ws.readyState !== WebSocket.CLOSED) {
         console.warn('⚠️ [STORE] Error en WebSocket (readyState:', ws.readyState, ')');
       }
+      // onclose se dispara después y se encarga de reintentar
     };
   },
 
   desconectarSocket: () => {
+    limpiarTimers();
+    reconnectAttempts = 0;
+    borrarSesion();
+
     const { socket } = get();
-    if (socket && socket.readyState !== WebSocket.CLOSED) {
+    if (socket) {
+      soltarHandlers(socket);
       try {
-        socket.onopen = null;
-        socket.onerror = null;
-        socket.onmessage = null;
-        socket.onclose = null;
         socket.close(1000, 'Desconexión manual');
-      } catch (e) {}
-      set({ socket: null, conectado: false, sessionId: null, mesa: null, rol: null });
+      } catch {}
     }
+    set({ socket: null, conectado: false, sessionId: null, mesa: null, rol: null });
+  },
+
+  // Llamar UNA vez desde un componente raíz (layout) para recuperar la sesión
+  // después de una recarga completa o de navegar con <a href> en vez de <Link>.
+  restaurarSesion: () => {
+    if (typeof window === 'undefined') return;
+    if (get().sessionId) return; // ya hay sesión en el store
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const { sessionId, mesa, rol } = JSON.parse(raw);
+      if (sessionId) get().conectarSocket(sessionId, mesa ?? null, rol ?? null);
+    } catch {}
   },
 
   enviarMensaje: (tipoOrData, payload = {}) => {
     const { socket, conectado } = get();
 
     if (!socket || !conectado || socket.readyState !== WebSocket.OPEN) {
-      console.warn('⚠️ No se pudo enviar mensaje: Socket desconectado (estado:', socket?.readyState, ')');
+      if (DEBUG) console.warn('⚠️ No se pudo enviar mensaje: Socket desconectado');
       return;
     }
 
-    let mensajeAEnviar: string;
-    if (typeof tipoOrData === 'string') {
-      mensajeAEnviar = JSON.stringify({ tipo: tipoOrData, payload });
-    } else {
-      mensajeAEnviar = JSON.stringify(tipoOrData);
-    }
+    const mensajeAEnviar =
+      typeof tipoOrData === 'string'
+        ? JSON.stringify({ tipo: tipoOrData, payload })
+        : JSON.stringify(tipoOrData);
 
     try {
       socket.send(mensajeAEnviar);
-      console.log(`📤 [STORE] Mensaje enviado:`, mensajeAEnviar.substring(0, 100));
     } catch (error) {
       console.error('❌ [STORE] Error enviando mensaje:', error);
     }
   },
 
   limpiarAnimacionRuleta: () => set({ animacionRuleta: null }),
-
   setMeseroBloqueado: (bloqueado) => set({ meseroBloqueado: bloqueado }),
 }));
+
+// =============================================================
+// RECONEXIÓN AL VOLVER A LA APP (móviles / PWA / otras pestañas)
+// =============================================================
+if (typeof window !== 'undefined' && !(window as any).__wsListenersInstalados) {
+  // Evita duplicar listeners con Hot Reload
+  (window as any).__wsListenersInstalados = true;
+
+  const verificar = (forzar = false) => {
+    const { socket, conectado, sessionId, mesa, rol, conectarSocket } = useSocketStore.getState();
+    if (!sessionId) return;
+
+    if (!socket || !conectado || socket.readyState !== WebSocket.OPEN) {
+      log('📱 [PWA] Socket caído, reconectando...');
+      reconnectAttempts = 0;
+      conectarSocket(sessionId, mesa, rol);
+    } else if (forzar) {
+      // Puede estar "OPEN" pero ser un zombi tras estar en segundo plano
+      log('📱 [PWA] Volviste a la app, renovando conexión por seguridad...');
+      forzarReconexion(socket);
+    }
+  };
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      ocultoDesde = Date.now();
+    } else {
+      verificar(ocultoDesde > 0 && Date.now() - ocultoDesde > OCULTO_MAX_MS);
+    }
+  });
+
+  // Safari/iOS: restauración desde bfcache
+  window.addEventListener('pageshow', (e) => verificar((e as PageTransitionEvent).persisted));
+
+  // Volvió la red
+  window.addEventListener('online', () => verificar(true));
+}
