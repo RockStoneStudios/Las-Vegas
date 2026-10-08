@@ -66,6 +66,11 @@ export default function PageMesaCliente() {
   const [cancionInput, setCancionInput] = useState('');
   const [autorInput, setAutorInput] = useState('');
 
+  // 🆕 CUPO DE CANCIONES (2 por mesa por turno)
+  const [cancionesUsadas, setCancionesUsadas] = useState(0);
+  const [cancionesLimite, setCancionesLimite] = useState(2);
+  const [cancionesRestantes, setCancionesRestantes] = useState(2);
+
   // ========== REDIRECCIÓN AUTOMÁTICA Y ANIMACIÓN GSAP ==========
   useEffect(() => {
     if (mesaLimpiada) {
@@ -182,6 +187,57 @@ export default function PageMesaCliente() {
 
     verificarEstadoMesero();
   }, [numeroMesa, setMeseroBloqueado]);
+  // 🆕 RE-SYNC: consultar si el modo pedir canción está activo al entrar
+useEffect(() => {
+  if (!numeroMesa) return;
+
+  const verificarModoCanciones = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/canciones/modo-activo`);
+      if (!res.ok) return;
+      const data = await res.json();
+      
+      console.log('🎵 [RE-SYNC] Modo pedir canción activo:', data.activo);
+      setPedirCancionActivo(data.activo);
+
+      // Si está activo, consultar el cupo de la mesa también
+      if (data.activo) {
+        const resCupo = await fetch(`${API_URL}/api/canciones/estado-mesa/${numeroMesa}`);
+        if (resCupo.ok) {
+          const cupo = await resCupo.json();
+          setCancionesUsadas(cupo.usadas ?? 0);
+          setCancionesLimite(cupo.limite ?? 2);
+          setCancionesRestantes(cupo.restantes ?? 2);
+          console.log('🎵 [RE-SYNC] Cupo de la mesa:', cupo);
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ [RE-SYNC] No se pudo verificar modo canciones:', e);
+    }
+  };
+
+  verificarModoCanciones();
+}, [numeroMesa]);
+
+  // 🆕 CONSULTAR CUPO DE CANCIONES AL ABRIR EL MODAL
+  useEffect(() => {
+    if (seccionActiva !== 'cancion') return;
+
+    const consultarCupo = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/canciones/estado-mesa/${numeroMesa}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setCancionesUsadas(data.usadas ?? 0);
+        setCancionesLimite(data.limite ?? 2);
+        setCancionesRestantes(data.restantes ?? 2);
+      } catch (e) {
+        console.warn('⚠️ No se pudo consultar cupo de canciones:', e);
+      }
+    };
+
+    consultarCupo();
+  }, [seccionActiva, numeroMesa]);
 
   // ========== EVENTOS WEBSOCKET ==========
   useEffect(() => {
@@ -211,6 +267,13 @@ export default function PageMesaCliente() {
     if (tipo === 'EVENT:MODO_PEDIR_CANCION') {
       console.log('🎵 [CLIENTE] Modo Pedir Canción cambiado a:', payload.activo);
       setPedirCancionActivo(payload.activo);
+      // 🆕 Nuevo turno → resetear cupo local
+      if (payload.activo) {
+        setCancionesUsadas(0);
+        setCancionesRestantes(cancionesLimite);
+        setCancionInput('');
+        setAutorInput('');
+      }
       return;
     }
 
@@ -330,7 +393,7 @@ export default function PageMesaCliente() {
       }
     }
 
-  }, [mensajeWS, numeroMesa, seccionActiva, router, sessionIdActiva, juegosDesbloqueados, setMeseroBloqueado]);
+  }, [mensajeWS, numeroMesa, seccionActiva, router, sessionIdActiva, juegosDesbloqueados, setMeseroBloqueado, cancionesLimite]);
 
   // ========== FUNCIONES ==========
   const handleLlamarMesero = async () => {
@@ -352,10 +415,15 @@ export default function PageMesaCliente() {
     enviarMensaje({ tipo: 'ACTION:VOTAR_OPCION', payload: { votacionId: votacionActiva.id, opcionId } });
   };
 
-  // 🎵 Enviar la canción al backend
+  // 🎵 Enviar la canción al backend (con validación de cupo)
   const handleEnviarCancion = async () => {
     if (!cancionInput.trim() || !autorInput.trim()) {
       alert('Por favor, escribe el nombre de la canción y el autor.');
+      return;
+    }
+
+    if (cancionesRestantes <= 0) {
+      alert('⛔ Ya pediste el máximo de canciones en este turno.');
       return;
     }
 
@@ -370,13 +438,22 @@ export default function PageMesaCliente() {
         }),
       });
 
+      const data = await res.json();
+
       if (res.ok) {
-        alert('✅ ¡Sugerencia enviada al DJ!');
+        setCancionesUsadas(data.usadas);
+        setCancionesRestantes(data.restantes);
         setCancionInput('');
         setAutorInput('');
-        setSeccionActiva('inicio');
+        alert(`✅ ¡Sugerencia enviada! Te quedan ${data.restantes} canciones en este turno.`);
+      } else if (res.status === 429) {
+        setCancionesUsadas(data.usadas ?? cancionesLimite);
+        setCancionesRestantes(0);
+        alert(`⛔ ${data.error}`);
+      } else if (res.status === 403) {
+        alert('⛔ El DJ no está aceptando canciones ahora mismo.');
       } else {
-        alert('❌ Hubo un error al enviar la canción. Intenta de nuevo.');
+        alert(`❌ ${data.error || 'Error al enviar la canción'}`);
       }
     } catch (error) {
       console.error('Error al enviar canción:', error);
@@ -518,6 +595,8 @@ export default function PageMesaCliente() {
               numeroMesa={numeroMesa}
               sessionId={sessionIdActiva}
               pedirCancionActivo={pedirCancionActivo}
+              cancionesRestantes={cancionesRestantes}
+              cancionesLimite={cancionesLimite}
               onSelect={(seccion) => setSeccionActiva(seccion)}
             />
           </>
@@ -540,6 +619,9 @@ export default function PageMesaCliente() {
           autorInput={autorInput}
           setAutorInput={setAutorInput}
           onEnviarCancion={handleEnviarCancion}
+          cancionesUsadas={cancionesUsadas}
+          cancionesLimite={cancionesLimite}
+          cancionesRestantes={cancionesRestantes}
         />
       </div>
     </main>

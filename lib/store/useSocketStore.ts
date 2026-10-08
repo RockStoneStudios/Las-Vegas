@@ -20,7 +20,6 @@ interface SocketState {
   animacionRuleta: PayloadRuletaGirar | null;
   mensajeWS: { tipo: string; payload?: any } | null;
 
-  // 🆕 Estado global de "mesero bloqueado" por mesa
   meseroBloqueado: boolean;
 
   conectarSocket: (sessionId: string, mesa?: number | null, rol?: string | null) => void;
@@ -28,7 +27,6 @@ interface SocketState {
   enviarMensaje: (tipoOrData: string | Record<string, any>, payload?: Record<string, any>) => void;
   limpiarAnimacionRuleta: () => void;
 
-  // 🆕 Acción para bloquear/desbloquear manualmente
   setMeseroBloqueado: (bloqueado: boolean) => void;
 }
 
@@ -41,8 +39,6 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   juegoDesbloqueado: null,
   animacionRuleta: null,
   mensajeWS: null,
-
-  // 🆕 Estado inicial del bloqueo
   meseroBloqueado: false,
 
   conectarSocket: (newSessionId: string, mesa: number | null = null, rol: string | null = null) => {
@@ -93,6 +89,15 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        // 🔥 HEARTBEAT: responder PING del servidor
+        if (data.tipo === 'PING') {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ tipo: 'PONG' }));
+          }
+          return;
+        }
+
         console.log('📩 [STORE] Mensaje recibido:', data.tipo);
         set({ mensajeWS: data });
 
@@ -103,7 +108,6 @@ export const useSocketStore = create<SocketState>((set, get) => ({
           set({ animacionRuleta: data.payload });
         }
 
-        // 🆕 Escuchar eventos de mesero
         if (data.tipo === 'EVENT:MESERO_SOLICITADO') {
           if (data.payload?.mesa === get().mesa) {
             console.log('🚫 [STORE] Mesero solicitado, bloqueando botón');
@@ -194,6 +198,5 @@ export const useSocketStore = create<SocketState>((set, get) => ({
 
   limpiarAnimacionRuleta: () => set({ animacionRuleta: null }),
 
-  // 🆕 Acción para bloquear/desbloquear manualmente
   setMeseroBloqueado: (bloqueado) => set({ meseroBloqueado: bloqueado }),
 }));

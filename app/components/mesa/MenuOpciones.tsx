@@ -6,7 +6,10 @@ interface Props {
   juegosDesbloqueados: string[];
   numeroMesa: number;
   sessionId: string | null;
-  pedirCancionActivo: boolean; // ✅ NUEVO
+  pedirCancionActivo: boolean;
+  // 🆕 Cupo de canciones
+  cancionesRestantes: number;
+  cancionesLimite: number;
   onSelect: (seccion: 'juegos_privados' | 'votaciones' | 'cancion') => void;
 }
 
@@ -14,7 +17,9 @@ export default function MenuOpciones({
   juegosDesbloqueados, 
   numeroMesa, 
   sessionId, 
-  pedirCancionActivo, // ✅ RECIBIMOS EL ESTADO
+  pedirCancionActivo,
+  cancionesRestantes,
+  cancionesLimite,
   onSelect 
 }: Props) {
   const router = useRouter();
@@ -22,6 +27,8 @@ export default function MenuOpciones({
   const handleIrARuletaPremios = () => {
     router.push(`/juegos/ruleta?mesa=${numeroMesa}&sessionId=${sessionId}`);
   };
+
+  const puedePedirCancion = pedirCancionActivo && cancionesRestantes > 0;
 
   return (
     <div className="grid grid-cols-2 gap-3 mt-1">
@@ -71,12 +78,12 @@ export default function MenuOpciones({
         <span className="text-[9px] text-cyan-400 font-mono mt-3">VOTAR ➔</span>
       </button>
 
-      {/* Tarjeta 4: Pedir Canción (CON DESHABILITACIÓN) */}
+      {/* Tarjeta 4: Pedir Canción (CON CONTADOR DE CUPO) */}
       <button 
         onClick={() => onSelect('cancion')}
-        disabled={!pedirCancionActivo}
+        disabled={!puedePedirCancion}
         className={`p-4 bg-[#0a071e]/80 border rounded-2xl text-left flex flex-col justify-between transition-all active:scale-95 ${
-          pedirCancionActivo 
+          puedePedirCancion 
             ? 'border-purple-500/30 hover:border-purple-500/70 cursor-pointer' 
             : 'border-gray-800/50 opacity-50 cursor-not-allowed grayscale'
         }`}
@@ -85,11 +92,21 @@ export default function MenuOpciones({
           <div className="text-2xl mb-1">🎵</div>
           <h3 className="font-orbitron font-bold text-xs text-purple-300">Pedir Canción</h3>
           <p className="text-[10px] text-gray-400 mt-1">
-            {pedirCancionActivo ? 'Sugerencias directo al DJ.' : '⛔ Desactivado por el DJ'}
+            {!pedirCancionActivo
+              ? '⛔ Desactivado por el DJ'
+              : cancionesRestantes <= 0
+                ? `⛔ Ya pediste tus ${cancionesLimite} canciones`
+                : `Te quedan ${cancionesRestantes} de ${cancionesLimite}`}
           </p>
         </div>
-        <span className={`text-[9px] font-mono mt-3 ${pedirCancionActivo ? 'text-purple-400' : 'text-gray-500'}`}>
-          {pedirCancionActivo ? 'PEDIR ➔' : 'ESPERA...'}
+        <span className={`text-[9px] font-mono mt-3 ${
+          puedePedirCancion ? 'text-purple-400' : 'text-gray-500'
+        }`}>
+          {!pedirCancionActivo
+            ? 'ESPERA...'
+            : cancionesRestantes <= 0
+              ? 'LÍMITE'
+              : 'PEDIR ➔'}
         </span>
       </button>
     </div>

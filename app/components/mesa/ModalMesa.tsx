@@ -21,17 +21,22 @@ interface Props {
   autorInput: string;
   setAutorInput: (val: string) => void;
   onEnviarCancion: () => void;
+  // 🆕 Cupo de canciones
+  cancionesUsadas: number;
+  cancionesLimite: number;
+  cancionesRestantes: number;
 }
 
 export default function ModalesMesa({ 
   seccionActiva, onClose, juegosDesbloqueados, numeroMesa, sessionId, votacionActiva, tiempoRestante, yaVoto, onVotar,
   premiosRuleta,
-  cancionInput, setCancionInput, autorInput, setAutorInput, onEnviarCancion
+  cancionInput, setCancionInput, autorInput, setAutorInput, onEnviarCancion,
+  cancionesUsadas, cancionesLimite, cancionesRestantes,
 }: Props) {
   const router = useRouter();
   const [girando, setGirando] = useState(false);
 
-  // 🎁 MODAL RULETA DE PREMIOS (NUEVO)
+  // 🎁 MODAL RULETA DE PREMIOS
   if (seccionActiva === 'ruleta-premios') {
     return (
       <div className="fixed inset-0 z-50 bg-[#020106]/95 backdrop-blur-lg p-6 flex flex-col justify-between animate-fadeIn">
@@ -110,7 +115,7 @@ export default function ModalesMesa({
               </button>
             )}
 
-            {/* 🎰 SLOT MACHINE (NUEVO) */}
+            {/* 🎰 SLOT MACHINE */}
             {juegosDesbloqueados.includes('slot') && (
               <button
                 onClick={() => router.push(`/juegos/slot?mesa=${numeroMesa}&sessionId=${sessionId}`)}
@@ -173,8 +178,10 @@ export default function ModalesMesa({
     );
   }
 
-  // MODAL CANCIÓN (ACTUALIZADO CON CONEXIÓN REAL)
+  // MODAL CANCIÓN (CON CONTADOR DE CUPO)
   if (seccionActiva === 'cancion') {
+    const bloqueado = cancionesRestantes <= 0;
+
     return (
       <div className="fixed inset-0 z-50 bg-[#020106]/95 backdrop-blur-lg p-6 flex flex-col justify-between animate-fadeIn">
         <div>
@@ -183,6 +190,22 @@ export default function ModalesMesa({
             <button onClick={onClose} className="text-gray-400 text-sm font-bold">✕ Cerrar</button>
           </div>
           <div className="p-4 bg-[#0d0722] border border-purple-500/30 rounded-xl">
+
+            {/* 🆕 Contador de cupo */}
+            <div className="flex items-center justify-between mb-3 px-1">
+              <span className="text-[10px] text-gray-400 font-space">
+                Canciones pedidas:{' '}
+                <span className="text-purple-400 font-bold">
+                  {cancionesUsadas}/{cancionesLimite}
+                </span>
+              </span>
+              {bloqueado && (
+                <span className="text-[10px] text-red-400 font-bold animate-pulse">
+                  ⛔ LÍMITE ALCANZADO
+                </span>
+              )}
+            </div>
+
             <p className="text-xs text-gray-400 mb-3">Escribe la canción que quieres escuchar:</p>
             
             <input 
@@ -190,7 +213,8 @@ export default function ModalesMesa({
               value={cancionInput}
               onChange={(e) => setCancionInput(e.target.value)}
               placeholder="Ej: Bohemian Rhapsody" 
-              className="w-full bg-[#0a0720] border border-[#1f1645] rounded-xl px-4 py-3 text-white text-sm font-space focus:outline-none focus:border-purple-500" 
+              disabled={bloqueado}
+              className="w-full bg-[#0a0720] border border-[#1f1645] rounded-xl px-4 py-3 text-white text-sm font-space focus:outline-none focus:border-purple-500 disabled:opacity-50" 
             />
             
             <input 
@@ -198,14 +222,20 @@ export default function ModalesMesa({
               value={autorInput}
               onChange={(e) => setAutorInput(e.target.value)}
               placeholder="Ej: Queen" 
-              className="w-full mt-2 bg-[#0a0720] border border-[#1f1645] rounded-xl px-4 py-3 text-white text-sm font-space focus:outline-none focus:border-purple-500" 
+              disabled={bloqueado}
+              className="w-full mt-2 bg-[#0a0720] border border-[#1f1645] rounded-xl px-4 py-3 text-white text-sm font-space focus:outline-none focus:border-purple-500 disabled:opacity-50" 
             />
 
             <button 
               onClick={onEnviarCancion}
-              className="w-full mt-3 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl font-orbitron font-black text-xs text-white uppercase tracking-widest shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_35px_rgba(168,85,247,0.6)] transition-all active:scale-95"
+              disabled={bloqueado}
+              className={`w-full mt-3 py-2.5 rounded-xl font-orbitron font-black text-xs uppercase tracking-widest transition-all ${
+                bloqueado
+                  ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_35px_rgba(168,85,247,0.6)] active:scale-95'
+              }`}
             >
-              Enviar Sugerencia
+              {bloqueado ? 'Límite alcanzado' : 'Enviar Sugerencia'}
             </button>
           </div>
         </div>
