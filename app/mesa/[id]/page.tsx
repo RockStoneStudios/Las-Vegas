@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSocketStore } from '@/lib/store/useSocketStore';
 
@@ -31,11 +31,8 @@ export default function PageMesaCliente() {
     conectado,
     meseroBloqueado,        // 🆕
     setMeseroBloqueado,     // 🆕
+    votacionActiva,         // 🗳️ ahora viene del store (cubre entrada tardía y reconexión)
   } = useSocketStore();
-
-  // 🆕 Votación activa que viene del store (se llena con ESTADO_INICIAL,
-  // VOTACION_ACTIVA_SYNC y VOTACION_EXPRES_START -> cubre entrada tardía y reconexión)
-  const votacionDelStore = useSocketStore((s) => s.votacionActiva);
 
   // ========== ESTADOS COMPARTIDOS ==========
   const [sessionIdActiva, setSessionIdActiva] = useState<string | null>(null);
@@ -44,10 +41,9 @@ export default function PageMesaCliente() {
   const [mesaLimpiada, setMesaLimpiada] = useState<boolean>(false);
   const [juegosDesbloqueados, setJuegosDesbloqueados] = useState<string[]>([]);
   const [seccionActiva, setSeccionActiva] = useState<'inicio' | 'juegos_privados' | 'votaciones' | 'cancion' | 'ruleta-premios'>('inicio');
-  const [votacionActiva, setVotacionActiva] = useState<any>(null);
-  const [votacionIniciada, setVotacionIniciada] = useState(false);
   const [yaVoto, setYaVoto] = useState(false);
   const [tiempoRestante, setTiempoRestante] = useState(0);
+  const votacionAbiertaRef = useRef<string | null>(null);
 
   // 🎰 ESTADOS DE LA RULETA PÚBLICA
   const [animando, setAnimando] = useState<boolean>(false);
@@ -74,6 +70,9 @@ export default function PageMesaCliente() {
   const [cancionesUsadas, setCancionesUsadas] = useState(0);
   const [cancionesLimite, setCancionesLimite] = useState(2);
   const [cancionesRestantes, setCancionesRestantes] = useState(2);
+
+  // 🧪 PRUEBA TEMPORAL (bórrala cuando confirmes que funciona)
+  console.log('🧪 [PAGE] votacionActiva =', votacionActiva?.id ?? null, '| seccionActiva =', seccionActiva);
 
   // ========== REDIRECCIÓN AUTOMÁTICA Y ANIMACIÓN GSAP ==========
   useEffect(() => {
@@ -169,6 +168,43 @@ export default function PageMesaCliente() {
     if (numeroMesa) obtenerSesionYConectar();
   }, [numeroMesa, conectarSocket]);
 
+  // 🗳️ Abrir el modal cuando aparece una votación nueva (una sola vez por id)
+  useEffect(() => {
+    if (!votacionActiva) {
+      votacionAbiertaRef.current = null;
+      setSeccionActiva((prev) => (prev === 'votaciones' ? 'inicio' : prev));
+      setYaVoto(false);
+      return;
+    }
+    if (votacionAbiertaRef.current !== votacionActiva.id) {
+      votacionAbiertaRef.current = votacionActiva.id;
+      setYaVoto(false);
+      setSeccionActiva('votaciones');
+    }
+  }, [votacionActiva?.id]);
+
+  // 🗳️ Cuenta regresiva calculada con la hora de fin (correcta aunque entres tarde)
+  useEffect(() => {
+    if (!votacionActiva) {
+      setTiempoRestante(0);
+      return;
+    }
+    const calcular = () =>
+      Math.max(0, Math.ceil((votacionActiva.finalizaEn - Date.now()) / 1000));
+
+    setTiempoRestante(calcular());
+    const t = setInterval(() => {
+      const s = calcular();
+      setTiempoRestante(s);
+      if (s <= 0) {
+        clearInterval(t);
+        // Respaldo: si se perdió EVENT:VOTACION_CERRADA, cerrar el modal igual
+        setSeccionActiva((prev) => (prev === 'votaciones' ? 'inicio' : prev));
+      }
+    }, 250);
+    return () => clearInterval(t);
+  }, [votacionActiva?.id, votacionActiva?.finalizaEn]);
+
   // 🆕 RE-SYNC: Consultar si la mesa ya tiene solicitud pendiente al montar
   useEffect(() => {
     if (!numeroMesa) return;
@@ -243,58 +279,6 @@ export default function PageMesaCliente() {
 
     consultarCupo();
   }, [seccionActiva, numeroMesa]);
-
-  // =============================================================
-  // 🆕 SYNC DE VOTACIÓN DESDE EL STORE (ENTRADA TARDÍA / RECONEXIÓN)
-  // =============================================================
-  // El store se llena con EVENT:ESTADO_INICIAL, EVENT:VOTACION_ACTIVA_SYNC
-  // y EVENT:VOTACION_EXPRES_START. Al reaccionar al estado del store (y no
-  // al orden de los mensajes), quien entre tarde entra directo a votaciones
-  // si la votación sigue activa.
-  useEffect(() => {
-    if (!votacionDelStore) return;
-
-    const segundos = Math.max(
-      0,
-      Math.round((votacionDelStore.finalizaEn - Date.now()) / 1000)
-    );
-    if (segundos <= 0) return; // ya terminó, no navegar
-
-    setVotacionActiva({
-      id: votacionDelStore.id,
-      pregunta: votacionDelStore.pregunta,
-      opciones: votacionDelStore.opciones,
-      duracion: segundos,
-    });
-    setVotacionIniciada(true);
-    setYaVoto(false);
-    setTiempoRestante(segundos);
-    setSeccionActiva('votaciones');
-  }, [votacionDelStore]);
-
-  // 🆕 COUNTDOWN: cierra la votación automáticamente cuando se acaba el tiempo
-  // (clave para quienes entraron tarde: el modal se cierra solo aunque el
-  // EVENT:VOTACION_CERRADA se haya perdido mientras estaban offline)
-  useEffect(() => {
-    if (!votacionIniciada || tiempoRestante <= 0) return;
-
-    const timer = setInterval(() => {
-      setTiempoRestante((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          setVotacionIniciada(false);
-          setVotacionActiva(null);
-          setYaVoto(false);
-          setSeccionActiva((s) => (s === 'votaciones' ? 'inicio' : s));
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-    // OJO: no incluir tiempoRestante en deps, o el intervalo se reinicia cada segundo
-  }, [votacionIniciada]);
 
   // ========== EVENTOS WEBSOCKET ==========
   useEffect(() => {
@@ -415,29 +399,7 @@ export default function PageMesaCliente() {
       }
     }
 
-    // 🗳️ 5. VOTACIONES
-    if (tipo === 'EVENT:VOTACION_EXPRES_START') {
-      setVotacionActiva({
-        id: payload.id,
-        pregunta: payload.pregunta,
-        opciones: payload.opciones,
-        duracion: payload.duracion || 30,
-      });
-      setVotacionIniciada(true);
-      setYaVoto(false);
-      setTiempoRestante(payload.duracion || 30);
-      setSeccionActiva('votaciones');
-    }
-
-    if (tipo === 'EVENT:VOTACION_CERRADA') {
-      setVotacionIniciada(false);
-      setVotacionActiva(null);
-      setTiempoRestante(0);
-      setYaVoto(false);
-      if (seccionActiva === 'votaciones') {
-        setSeccionActiva('inicio');
-      }
-    }
+    // 🗳️ (Las votaciones ya no se manejan aquí: viven en el store)
 
     // 🎁 3.5 RECEPCIÓN DE PREMIOS Y APERTURA DE RULETA DE PREMIOS
     if (tipo === 'EVENT:RULETA_CONFIGURACION_INICIAL') {
