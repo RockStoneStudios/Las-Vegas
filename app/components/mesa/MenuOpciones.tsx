@@ -10,7 +10,9 @@ interface Props {
   // 🆕 Cupo de canciones
   cancionesRestantes: number;
   cancionesLimite: number;
-  onSelect: (seccion: 'juegos_privados' | 'votaciones' | 'cancion') => void;
+  // ⚡ Subasta
+  subastaActiva: boolean;
+  onSelect: (seccion: 'juegos_privados' | 'votaciones' | 'cancion' | 'subasta') => void;
 }
 
 export default function MenuOpciones({ 
@@ -20,6 +22,7 @@ export default function MenuOpciones({
   pedirCancionActivo,
   cancionesRestantes,
   cancionesLimite,
+  subastaActiva,
   onSelect 
 }: Props) {
   const router = useRouter();
@@ -37,9 +40,9 @@ export default function MenuOpciones({
         <div>
           <div className="text-2xl mb-1">🎰</div>
           <h3 className="font-orbitron font-bold text-xs text-purple-300">Ruleta Bar</h3>
-          <p className="text-[10px] text-gray-400 mt-1">Participas automáticamente en vivo.</p>
+          <p className="text- text-gray-400 mt-1">Participas automáticamente en vivo.</p>
         </div>
-        <span className="text-[9px] text-cyan-400 font-mono mt-3">EN VIVO</span>
+        <span className="text- text-cyan-400 font-mono mt-3">EN VIVO</span>
       </div>
 
       {/* Tarjeta 2: Juegos Privados */}
@@ -47,9 +50,9 @@ export default function MenuOpciones({
         <div>
           <div className="text-2xl mb-1">🎮</div>
           <h3 className="font-orbitron font-bold text-xs text-pink-400">Juegos Privados</h3>
-          <p className="text-[10px] text-gray-400 mt-1">Shots, verdad o reto para la mesa.</p>
+          <p className="text- text-gray-400 mt-1">Shots, verdad o reto para la mesa.</p>
         </div>
-        <span className="text-[9px] text-pink-400 font-mono mt-3">ABRIR ➔</span>
+        <span className="text- text-pink-400 font-mono mt-3">ABRIR ➔</span>
       </button>
 
       {/* 🚨 CONDICIONAL: Ruleta de Premios (Solo si está desbloqueada) */}
@@ -71,11 +74,11 @@ export default function MenuOpciones({
       {/* Tarjeta 3: Votaciones */}
       <button onClick={() => onSelect('votaciones')} className="p-4 bg-[#0a071e]/80 border border-cyan-500/30 hover:border-cyan-500/70 rounded-2xl text-left flex flex-col justify-between transition-all active:scale-95">
         <div>
-          <div className="text-2xl mb-1">🗳️</div>
+          <div className="text-2xl mb-1">🗳</div>
           <h3 className="font-orbitron font-bold text-xs text-cyan-300">Votaciones</h3>
-          <p className="text-[10px] text-gray-400 mt-1">Vota música y eventos de la noche.</p>
+          <p className="text- text-gray-400 mt-1">Vota música y eventos de la noche.</p>
         </div>
-        <span className="text-[9px] text-cyan-400 font-mono mt-3">VOTAR ➔</span>
+        <span className="text- text-cyan-400 font-mono mt-3">VOTAR ➔</span>
       </button>
 
       {/* Tarjeta 4: Pedir Canción (CON CONTADOR DE CUPO) */}
@@ -91,7 +94,7 @@ export default function MenuOpciones({
         <div>
           <div className="text-2xl mb-1">🎵</div>
           <h3 className="font-orbitron font-bold text-xs text-purple-300">Pedir Canción</h3>
-          <p className="text-[10px] text-gray-400 mt-1">
+          <p className="text- text-gray-400 mt-1">
             {!pedirCancionActivo
               ? '⛔ Desactivado por el DJ'
               : cancionesRestantes <= 0
@@ -99,7 +102,7 @@ export default function MenuOpciones({
                 : `Te quedan ${cancionesRestantes} de ${cancionesLimite}`}
           </p>
         </div>
-        <span className={`text-[9px] font-mono mt-3 ${
+        <span className={`text- font-mono mt-3 ${
           puedePedirCancion ? 'text-purple-400' : 'text-gray-500'
         }`}>
           {!pedirCancionActivo
@@ -108,6 +111,30 @@ export default function MenuOpciones({
               ? 'LÍMITE'
               : 'PEDIR ➔'}
         </span>
+      </button>
+
+      {/* ⚡ Tarjeta 5: Subasta - GRIS si no hay activa, NEÓN si el admin la activó */}
+      <button
+        onClick={() => subastaActiva && onSelect('subasta')}
+        disabled={!subastaActiva}
+        className={`col-span-2 p-4 rounded-2xl text-left flex flex-col justify-between transition-all active:scale-95 ${
+          subastaActiva
+            ? 'bg-[#0a071e]/80 border border-[#00f3ff]/50 shadow-[0_0_20px_rgba(0,243,255,0.25)] cursor-pointer hover:border-[#00f3ff]'
+            : 'bg-[#0a071e]/40 border border-gray-800/50 opacity-50 cursor-not-allowed grayscale'
+        }`}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div>
+            <div className="text-2xl mb-1">⚡</div>
+            <h3 className={`font-orbitron font-bold text-xs ${subastaActiva ? 'text-[#00f3ff]' : 'text-gray-500'}`}>Subasta</h3>
+            <p className="text- text-gray-400 mt-1">
+              {subastaActiva ? '¡Botella en vivo! Pujá y ganala.' : 'Próximamente - el admin la activa'}
+            </p>
+          </div>
+          <span className={`text- font-mono ${subastaActiva ? 'text-[#ff00a0] animate-pulse' : 'text-gray-500'}`}>
+            {subastaActiva ? 'EN VIVO ➔' : 'INACTIVA'}
+          </span>
+        </div>
       </button>
     </div>
   );

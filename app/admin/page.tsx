@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import PanelControlAdmin from '@/app/components/juegos/PanelControlAdmin';
+import GestionSubastasAdmin from '@/app/components/GestionSubastasAdmin';
 import { useSocketStore } from '@/lib/store/useSocketStore';
 
 export default function PaginaAdmin() {
@@ -23,7 +24,6 @@ export default function PaginaAdmin() {
   // 🎵 Control del modo "Pedir Canción"
   const [pedirCancionActivo, setPedirCancionActivo] = useState(false);
 
-
   // 📌 Estado de la votación
   const [votacionActiva, setVotacionActiva] = useState<{
     id: string;
@@ -35,7 +35,7 @@ export default function PaginaAdmin() {
   const [votacionIniciada, setVotacionIniciada] = useState(false);
   const [tiempoRestante, setTiempoRestante] = useState(0);
   
-  // 🗳️ Estados del formulario de votación
+  // 🗳 Estados del formulario de votación
   const [preguntaVotacion, setPreguntaVotacion] = useState('¿Qué género musical quieres escuchar?');
   const [opcionesVotacion, setOpcionesVotacion] = useState<string[]>([
     '🔥 Reggaetón',
@@ -148,7 +148,6 @@ export default function PaginaAdmin() {
 
   setVotacionActiva((prev) => {
     if (!prev) {
-      // ✅ Si el admin no tenía la votación cargada, la creamos completa
       return {
         id: payload.id || '',
         pregunta: 'Votación en curso',
@@ -162,7 +161,6 @@ export default function PaginaAdmin() {
     };
   });
 
-  // ✅ Aseguramos que el panel se muestre
   setVotacionIniciada(true);
   return;
 }
@@ -175,7 +173,7 @@ export default function PaginaAdmin() {
     }
   }, [mensajeWS]);
 
-  // ⏱️ Contador de tiempo
+  // ⏱ Contador de tiempo
   useEffect(() => {
     if (!votacionIniciada || tiempoRestante <= 0) return;
 
@@ -310,8 +308,8 @@ export default function PaginaAdmin() {
     <main className="relative min-h-screen pt-20 pb-16 px-4 sm:px-6 lg:px-8 bg-[#020106] flex flex-col items-center gap-8 select-none font-orbitron overflow-hidden">
       {/* Fondo Neo-Punk */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#00f3ff0a_1px,transparent_1px),linear-gradient(to_bottom,#ff00a00a_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-      <div className="absolute w-[600px] h-[600px] bg-[#ff00a0]/10 rounded-full blur-[140px] pointer-events-none -top-30 -left-20" />
-      <div className="absolute w-[600px] h-[600px] bg-[#00f3ff]/10 rounded-full blur-[140px] pointer-events-none -bottom-30 -right-20" />
+      <div className="absolute w- h- bg-[#ff00a0]/10 rounded-full blur- pointer-events-none -top-30 -left-20" />
+      <div className="absolute w- h- bg-[#00f3ff]/10 rounded-full blur- pointer-events-none -bottom-30 -right-20" />
 
       {/* Encabezado */}
       <div className="relative z-10 text-center max-w-6xl w-full flex flex-col items-center gap-4">
@@ -326,7 +324,7 @@ export default function PaginaAdmin() {
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 bg-[#080516]/80 border border-[#00f3ff]/30 px-4 sm:px-6 py-3 rounded-xl backdrop-blur-md shadow-[0_0_20px_rgba(0,243,255,0.15)] max-w-5xl w-full">
           
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <p className="font-space text-slate-300 text-[10px] sm:text-xs font-bold tracking-wider whitespace-nowrap">
+            <p className="font-space text-slate-300 text- sm:text-xs font-bold tracking-wider whitespace-nowrap">
               Control en tiempo real
             </p>
             <span className="hidden md:inline text-[#00f3ff] text-xs">•</span>
@@ -335,7 +333,7 @@ export default function PaginaAdmin() {
           {/* 🎁 Botón protegido para Premios */}
           <button
             onClick={() => setMostrarModalPin(true)}
-            className="text-[10px] font-black text-[#ff00a0] hover:text-white hover:shadow-[0_0_12px_#ff00a0] transition-all uppercase tracking-widest cursor-pointer border border-[#ff00a0]/50 px-3 py-1.5 rounded-md bg-[#ff00a0]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#ff00a0]"
+            className="text- font-black text-[#ff00a0] hover:text-white hover:shadow-[0_0_12px_#ff00a0] transition-all uppercase tracking-widest cursor-pointer border border-[#ff00a0]/50 px-3 py-1.5 rounded-md bg-[#ff00a0]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#ff00a0]"
           >
             🎁 [ GESTIONAR PREMIOS ]
           </button>
@@ -344,7 +342,7 @@ export default function PaginaAdmin() {
           <Link
             href={`/admin/ruleta?sessionId=${sessionId}`}
             target="_blank"
-            className="text-[10px] font-black text-[#00f3ff] hover:text-white hover:shadow-[0_0_12px_#00f3ff] transition-all uppercase tracking-widest cursor-pointer border border-[#00f3ff]/50 px-3 py-1.5 rounded-md bg-[#00f3ff]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#00f3ff]"
+            className="text- font-black text-[#00f3ff] hover:text-white hover:shadow-[0_0_12px_#00f3ff] transition-all uppercase tracking-widest cursor-pointer border border-[#00f3ff]/50 px-3 py-1.5 rounded-md bg-[#00f3ff]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#00f3ff]"
           >
             🎰 [ ABRIR RULETA TV ]
           </Link>
@@ -353,20 +351,20 @@ export default function PaginaAdmin() {
           <Link
             href={`/termometro?sessionId=${sessionId}`}
             target="_blank"
-            className="text-[10px] font-black text-[#ff6b6b] hover:text-white hover:shadow-[0_0_12px_#ff6b6b] transition-all uppercase tracking-widest cursor-pointer border border-[#ff6b6b]/50 px-3 py-1.5 rounded-md bg-[#ff6b6b]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#ff6b6b]"
+            className="text- font-black text-[#ff6b6b] hover:text-white hover:shadow-[0_0_12px_#ff6b6b] transition-all uppercase tracking-widest cursor-pointer border border-[#ff6b6b]/50 px-3 py-1.5 rounded-md bg-[#ff6b6b]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#ff6b6b]"
           >
             🔥 [ ABRIR TERMÓMETRO TV ]
           </Link>
 
-          {/* 🛎️ Link a solicitudes */}
+          {/* 🛎 Link a solicitudes */}
           <Link
             href={`/admin/solicitudes`}
             target="_blank"
-            className="relative text-[10px] font-black text-[#00f3ff] hover:text-white hover:shadow-[0_0_12px_#00f3ff] transition-all uppercase tracking-widest cursor-pointer border border-[#00f3ff]/50 px-3 py-1.5 rounded-md bg-[#00f3ff]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#00f3ff]"
+            className="relative text- font-black text-[#00f3ff] hover:text-white hover:shadow-[0_0_12px_#00f3ff] transition-all uppercase tracking-widest cursor-pointer border border-[#00f3ff]/50 px-3 py-1.5 rounded-md bg-[#00f3ff]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#00f3ff]"
           >
-            🛎️ [ SOLICITUDES ]
+            🛎 [ SOLICITUDES ]
             {notificaciones > 0 && (
-              <span className="absolute -top-2 -right-2 flex items-center justify-center w-4 h-4 bg-red-500 text-white text-[8px] font-bold rounded-full shadow-[0_0_10px_rgba(239,68,68,0.7)] animate-pulse">
+              <span className="absolute -top-2 -right-2 flex items-center justify-center w-4 h-4 bg-red-500 text-white text- font-bold rounded-full shadow-[0_0_10px_rgba(239,68,68,0.7)] animate-pulse">
                 {notificaciones}
               </span>
             )}
@@ -376,7 +374,7 @@ export default function PaginaAdmin() {
           <Link
             href={`/admin/canciones`}
             target="_blank"
-            className="text-[10px] font-black text-[#00f3ff] hover:text-white hover:shadow-[0_0_12px_#00f3ff] transition-all uppercase tracking-widest cursor-pointer border border-[#00f3ff]/50 px-3 py-1.5 rounded-md bg-[#00f3ff]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#00f3ff]"
+            className="text- font-black text-[#00f3ff] hover:text-white hover:shadow-[0_0_12px_#00f3ff] transition-all uppercase tracking-widest cursor-pointer border border-[#00f3ff]/50 px-3 py-1.5 rounded-md bg-[#00f3ff]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#00f3ff]"
           >
             🎵 [ VER CANCIONES ]
           </Link>
@@ -384,7 +382,7 @@ export default function PaginaAdmin() {
           {/* 🎵 Botón para activar/desactivar Pedir Canción */}
           <button
             onClick={togglePedirCancion}
-            className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all duration-200 whitespace-nowrap animate-pulse ${
+            className={`text- font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border transition-all duration-200 whitespace-nowrap animate-pulse ${
               pedirCancionActivo
                 ? 'border-[#00f3ff] text-[#00f3ff] bg-[#00f3ff]/10 shadow-[0_0_10px_rgba(0,243,255,0.3)]'
                 : 'border-gray-600 text-gray-500 bg-[#060413]/50'
@@ -405,7 +403,7 @@ export default function PaginaAdmin() {
             />
             <button
               onClick={() => handleCerrarMesa(numeroMesa || 1)}
-              className="text-[10px] font-black text-[#ff6b6b] hover:text-white hover:shadow-[0_0_12px_#ff6b6b] transition-all uppercase tracking-widest cursor-pointer border border-[#ff6b6b]/50 px-3 py-1.5 rounded-md bg-[#ff6b6b]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#ff6b6b]"
+              className="text- font-black text-[#ff6b6b] hover:text-white hover:shadow-[0_0_12px_#ff6b6b] transition-all uppercase tracking-widest cursor-pointer border border-[#ff6b6b]/50 px-3 py-1.5 rounded-md bg-[#ff6b6b]/10 flex items-center gap-1.5 whitespace-nowrap animate-pulse shadow-[0_0_10px_#ff6b6b]"
             >
               🧹 [ CERRAR MESA ]
             </button>
@@ -415,18 +413,18 @@ export default function PaginaAdmin() {
 
           <button
             onClick={cerrarSesion}
-            className="text-[10px] font-black text-red-400 hover:text-red-300 hover:shadow-[0_0_10px_rgba(239,68,68,0.5)] transition-all uppercase tracking-widest cursor-pointer border border-red-500/40 px-3 py-1.5 rounded-md bg-red-500/10 whitespace-nowrap animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+            className="text- font-black text-red-400 hover:text-red-300 hover:shadow-[0_0_10px_rgba(239,68,68,0.5)] transition-all uppercase tracking-widest cursor-pointer border border-red-500/40 px-3 py-1.5 rounded-md bg-red-500/10 whitespace-nowrap animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]"
           >
             [ CERRAR SESIÓN ]
           </button>
         </div>
       </div>
 
-      {/* 🗳️ PANEL DE VOTACIONES */}
+      {/* 🗳 PANEL DE VOTACIONES */}
       <div className="relative z-10 w-full max-w-5xl">
         <div className="bg-[#080516]/80 border border-[#ff00a0]/30 rounded-2xl p-6 backdrop-blur-md shadow-[0_0_30px_rgba(255,0,160,0.1)]">
           <h2 className="font-orbitron font-black text-lg text-[#ff00a0] uppercase tracking-widest drop-shadow-[0_0_10px_#ff00a0] mb-4 flex items-center gap-3">
-            <span>🗳️</span> VOTACIONES EN VIVO
+            <span>🗳</span> VOTACIONES EN VIVO
             {votacionIniciada && (
               <span className="text-xs text-[#00f3ff] animate-pulse font-space">
                 ● EN CURSO
@@ -434,7 +432,7 @@ export default function PaginaAdmin() {
             )}
             {!conectado && (
               <span className="text-xs text-red-400 animate-pulse font-space">
-                ⚠️ DESCONECTADO
+                ⚠ DESCONECTADO
               </span>
             )}
           </h2>
@@ -509,11 +507,11 @@ export default function PaginaAdmin() {
                 </h3>
                 <div className="flex items-center gap-3">
                   <span className="text-[#00f3ff] font-space text-xs">
-                    ⏱️ {tiempoRestante}s
+                    ⏱ {tiempoRestante}s
                   </span>
                   <button
                     onClick={handleCerrarVotacion}
-                    className="text-[10px] text-red-400 border border-red-500/40 px-3 py-1 rounded-md hover:bg-red-500/10 transition-all"
+                    className="text- text-red-400 border border-red-500/40 px-3 py-1 rounded-md hover:bg-red-500/10 transition-all"
                   >
                     ✕ CERRAR
                   </button>
@@ -548,6 +546,11 @@ export default function PaginaAdmin() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ⚡ SUBASTAS EN VIVO - NUEVO */}
+      <div className="relative z-10 w-full max-w-5xl">
+        <GestionSubastasAdmin />
       </div>
 
       {/* Panel de Control */}
