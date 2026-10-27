@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Subasta {
   _id: string;
@@ -22,6 +22,7 @@ export default function GestionSubastasAdmin() {
   const [cierraA, setCierraA] = useState('23:00');
 
   const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const intervalRef = useRef<any>(null);
 
   const cargar = async () => {
     try {
@@ -31,7 +32,29 @@ export default function GestionSubastasAdmin() {
     } catch {}
   };
 
+  // 👈 Carga al entrar
   useEffect(() => { cargar(); }, []);
+
+  // ⚡ Polling cada 8 seg SOLO si hay activa
+  const activa = subastas.find(s => s.estado === 'ACTIVA');
+
+  useEffect(() => {
+    // Limpia el anterior
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    // Si no hay activa, no pone intervalo
+    if (!activa) return;
+
+    intervalRef.current = setInterval(() => {
+      // Si la pestaña está en segundo plano, no pregunta
+      if (document.hidden) return;
+      cargar();
+    }, 8000);
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [!!activa]); // solo se reinicia cuando pasa de no-activa a activa
 
   const crear = async () => {
     if (!producto.trim()) return alert('Escribe el producto');
@@ -55,13 +78,11 @@ export default function GestionSubastasAdmin() {
     cargar();
   };
 
-  const activa = subastas.find(s => s.estado === 'ACTIVA');
-
   return (
     <div className="bg-[#080516]/80 border border-[#00f3ff]/30 rounded-2xl p-6 backdrop-blur-md shadow-[0_0_30px_rgba(0,243,255,0.1)]">
       <h2 className="font-orbitron font-black text-lg text-[#00f3ff] uppercase tracking-widest drop-shadow-[0_0_10px_#00f3ff] mb-4 flex items-center gap-3">
         <span>⚡</span> SUBASTAS EN VIVO
-        {activa && <span className="text-xs text-[#ff00a0] animate-pulse font-space">● EN CURSO</span>}
+        {activa && <span className="text-xs text-[#ff00a0] animate-pulse font-space">● EN CURSO • actualiza cada 8s</span>}
       </h2>
 
       {/* SUBASTA ACTIVA */}
