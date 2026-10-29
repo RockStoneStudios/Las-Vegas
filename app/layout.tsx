@@ -21,7 +21,9 @@ const spaceGrotesk = Space_Grotesk({
   variable: '--font-space',
 });
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://lasvegasdiscobar.netlify.app";
+// const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://lasvegasdiscobar.netlify.app";
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ||'https://las-vegas-woad.vercel.app'
 
 export const viewport: Viewport = {
   themeColor: "#060413",
