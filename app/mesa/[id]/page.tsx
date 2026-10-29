@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSocketStore } from '@/lib/store/useSocketStore';
+import { toast } from 'sonner';
 
 // Importamos los componentes separados
 import MesaHeader from '@/app/components/mesa/MesaHeader';
@@ -335,17 +336,25 @@ export default function PageMesaCliente() {
     if (meseroBloqueado || !sessionIdActiva) return;
     setMeseroBloqueado(true);
     enviarMensaje({ tipo: 'ACTION:SOLICITAR_ATENCION', payload: { mesa: numeroMesa, sessionId: sessionIdActiva } });
+    toast.success('Mesero en camino 🍹', { description: `Mesa ${numeroMesa} - ya viene a atenderte` });
   };
 
   const handleVotar = (opcionId: number) => {
     if (yaVoto || !votacionActiva) return;
     setYaVoto(true);
     enviarMensaje({ tipo: 'ACTION:VOTAR_OPCION', payload: { votacionId: votacionActiva.id, opcionId } });
+    toast.success('¡Voto registrado! 🗳️');
   };
 
   const handleEnviarCancion = async () => {
-    if (!cancionInput.trim() || !autorInput.trim()) { alert('Por favor, escribe el nombre de la canción y el autor.'); return; }
-    if (cancionesRestantes <= 0) { alert('⛔ Ya pediste el máximo de canciones en este turno.'); return; }
+    if (!cancionInput.trim() || !autorInput.trim()) {
+      toast.error('Falta info 🎵', { description: 'Escribe el nombre de la canción y el autor.' });
+      return;
+    }
+    if (cancionesRestantes <= 0) {
+      toast.warning('⛔ Sin cupo', { description: 'Ya pediste el máximo de canciones en este turno.' });
+      return;
+    }
     try {
       const res = await fetch(`${API_URL}/api/canciones/solicitar`, {
         method: 'POST',
@@ -358,19 +367,27 @@ export default function PageMesaCliente() {
         setCancionesRestantes(data.restantes);
         setCancionInput('');
         setAutorInput('');
-        alert(`✅ ¡Sugerencia enviada! Te quedan ${data.restantes} canciones en este turno.`);
+        toast.success('✅ ¡Sugerencia enviada!', {
+          description: `Te quedan ${data.restantes} ${data.restantes === 1 ? 'canción' : 'canciones'} en este turno.`,
+          style: {
+            background: '#0a0720',
+            border: '1px solid #00f3ff',
+            boxShadow: '0 0 20px rgba(0,243,255,0.4)',
+            color: '#fff',
+          },
+        });
       } else if (res.status === 429) {
         setCancionesUsadas(data.usadas ?? cancionesLimite);
         setCancionesRestantes(0);
-        alert(`⛔ ${data.error}`);
+        toast.error(`⛔ ${data.error}`);
       } else if (res.status === 403) {
-        alert('⛔ El DJ no está aceptando canciones ahora mismo.');
+        toast.warning('⛔ DJ pausado', { description: 'El DJ no está aceptando canciones ahora mismo.' });
       } else {
-        alert(`❌ ${data.error || 'Error al enviar la canción'}`);
+        toast.error(`❌ ${data.error || 'Error al enviar la canción'}`);
       }
     } catch (error) {
       console.error('Error al enviar canción:', error);
-      alert('❌ Error de conexión con el servidor.');
+      toast.error('❌ Error de conexión', { description: 'No pudimos contactar al servidor.' });
     }
   };
 
@@ -379,7 +396,7 @@ export default function PageMesaCliente() {
     if (!subasta) return;
     const monto = Number(montoPuja);
     if (!monto || monto <= subasta.precioActual) {
-      alert(`La puja debe ser mayor a $${subasta.precioActual.toLocaleString()}`);
+      toast.error('Puja muy baja 💸', { description: `Debe ser mayor a $${subasta.precioActual.toLocaleString()}` });
       return;
     }
     try {
@@ -392,12 +409,18 @@ export default function PageMesaCliente() {
       if (json.ok) {
         setSubasta(json.data);
         setMontoPuja(String(json.data.precioActual + 10000));
-        alert(`✅ ¡Vas ganando con $${monto.toLocaleString()}!`);
+        toast.success(`🔥 ¡Vas ganando con $${monto.toLocaleString()}!`, {
+          style: {
+            background: '#0a0720',
+            border: '1px solid #ffe600',
+            boxShadow: '0 0 25px rgba(255,230,0,0.5)',
+          },
+        });
       } else {
-        alert(`❌ ${json.error || 'No se pudo pujar'}`);
+        toast.error(`❌ ${json.error || 'No se pudo pujar'}`);
       }
     } catch {
-      alert('❌ Error de conexión');
+      toast.error('❌ Error de conexión');
     }
   };
 

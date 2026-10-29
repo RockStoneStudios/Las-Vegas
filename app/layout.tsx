@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Orbitron, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 import Navbar from "@/app/components/Navbar";
 import { MesaProvider } from "@/lib/context/MesaContext";
@@ -47,17 +48,12 @@ export const metadata: Metadata = {
   authors: [{ name: "Las Vegas Discobar" }],
   creator: "Las Vegas Discobar",
   publisher: "Las Vegas Discobar",
-
-  // 📱 PWA Manifest
   manifest: "/manifest.json",
-
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Las Vegas",
   },
-
-  // 🖼️ Iconos — apuntando a los archivos reales de /public
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png", sizes: "any" },
@@ -69,7 +65,6 @@ export const metadata: Metadata = {
       { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
-
   openGraph: {
     type: "website",
     locale: "es_CO",
@@ -88,7 +83,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-
   twitter: {
     card: "summary_large_image",
     title: "Las Vegas Discobar | La Mejor Rumba en Sopetrán 🍹🔥",
@@ -97,11 +91,7 @@ export const metadata: Metadata = {
     images: ["/icon0.png"],
     creator: "@lasvegasdiscobar",
   },
-
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: { index: true, follow: true },
   category: "entertainment",
 };
 
@@ -122,6 +112,7 @@ export default function RootLayout({
             <main className="grow pt-20 flex flex-col">{children}</main>
             <WebSocketListener />
             <SocketRestorer />
+            <Toaster theme="dark" position="top-center" richColors closeButton />
           </PanelControlProvider>
         </MesaProvider>
       </body>
