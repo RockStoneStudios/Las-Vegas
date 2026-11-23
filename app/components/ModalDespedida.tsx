@@ -1,27 +1,18 @@
 // app/components/ModalDespedida.tsx
-
 'use client';
-
-import { useEffect } from 'react';
 
 interface ModalDespedidaProps {
   mensaje: string;
   mesa: number;
-  onCerrar?: () => void; // ✅ AGREGAR ESTA LÍNEA
+  onCerrar?: () => void;
 }
 
-export function ModalDespedida({ mensaje, mesa, onCerrar }: ModalDespedidaProps) {
-  useEffect(() => {
-    localStorage.removeItem('sessionId');
-    localStorage.removeItem('mesa');
-    
-    // 🔥 Si onCerrar existe, ejecutarlo
-    const timer = setTimeout(() => {
-      if (onCerrar) onCerrar();
-    }, 5000);
-    
-    return () => clearTimeout(timer);
-  }, [onCerrar]);
+export function ModalDespedida({ mensaje, mesa }: ModalDespedidaProps) {
+  // OJO: Le quité el useEffect con el timer de 5s y el localStorage.removeItem
+  // Antes tenías 2 timers peleando: este de 5s y el del Listener de 10s.
+  // Ahora el único que controla el tiempo es WebSocketListener.
+  // Y tampoco borramos 'sessionId' / 'mesa' aquí, porque tu sesión real
+  // se guarda en 'ws_session'. Eso ya lo borra el store con borrarSesion().
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/90 backdrop-blur-md">
