@@ -28,7 +28,8 @@ interface IMesa {
   estado?: 'DISPONIBLE' | 'OCUPADA' | 'RESERVADA';
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Forzamos el puerto 3001 donde está corriendo tu Elysia
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function ReservasClientePage() {
   const [mesas, setMesas] = useState<IMesa[]>([]);
@@ -49,16 +50,21 @@ export default function ReservasClientePage() {
     emailCliente: '',
   });
 
+  // El mapa solo se carga una vez al entrar a la página
   useEffect(() => {
     fetchMesas();
-  }, [formData.fecha, formData.hora]);
+  }, []);
 
   const fetchMesas = async () => {
     try {
       setLoading(true);
-      const res = await fetch(
-        `${API_URL}/mesas?fecha=${formData.fecha}&hora=${formData.hora}`
-      );
+      // Petición limpia a la ruta que ya tienes en tu backend
+      const res = await fetch(`${API_URL}/mesas`);
+      
+      if (!res.ok) {
+        throw new Error(`Error HTTP: ${res.status}`);
+      }
+
       const data = await res.json();
       if (Array.isArray(data)) {
         setMesas(data);
@@ -123,9 +129,10 @@ export default function ReservasClientePage() {
           fecha: formData.fecha,
           hora: formData.hora,
           personas: Number(formData.personas),
-          nombreCliente: formData.nombreCliente,
-          telefonoCliente: formData.telefonoCliente,
-          emailCliente: formData.emailCliente,
+          // 🚀 Nombres exactos que espera tu backend (Elysia + Repositorio)
+          clienteNombre: formData.nombreCliente,
+          clienteTelefono: formData.telefonoCliente,
+          clienteEmail: formData.emailCliente,
         }),
       });
 
@@ -133,7 +140,8 @@ export default function ReservasClientePage() {
         setReservaExitosa(true);
       } else {
         const err = await res.json();
-        alert(`Error: ${err.message || 'No se pudo procesar la reserva'}`);
+        const errorMsg = err.error || err.message || 'No se pudo procesar la reserva';
+        alert(`Error: ${errorMsg}`);
       }
     } catch (error) {
       console.error('Error al crear reserva:', error);
@@ -280,7 +288,6 @@ export default function ReservasClientePage() {
                         className={`border-2 rounded-xl p-2 flex flex-col justify-between shadow-lg transition-all ${getEstiloMesa(mesa)}`}
                       >
                         <div className="flex justify-between items-center">
-                          {/* ⬇️ CAMBIO: text-base en mobile, text-xs en desktop */}
                           <span className="font-bold text-base sm:text-xs truncate flex items-center gap-1">
                             {mesa.tipo === 'PISTA_BAILE' && (
                               <Disc size={16} className="sm:w-3 sm:h-3 animate-spin" />
@@ -288,7 +295,6 @@ export default function ReservasClientePage() {
                             {mesa.numero}
                           </span>
                           {mesa.tipo === 'VIP' && (
-                            // ⬇️ CAMBIO: text-sm en mobile, text-[9px] en desktop
                             <span className="text-sm sm:text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40">
                               VIP
                             </span>
@@ -296,7 +302,6 @@ export default function ReservasClientePage() {
                         </div>
 
                         {mesa.tipo !== 'ESCENARIO' && mesa.tipo !== 'PISTA_BAILE' && (
-                          // ⬇️ CAMBIO: text-sm en mobile, text-[10px] en desktop
                           <div className="flex justify-between items-end text-sm sm:text-[10px] opacity-90">
                             <span className="flex items-center gap-1">
                               <Users size={14} className="sm:w-2.5 sm:h-2.5" /> Cap. {mesa.capacidad}
@@ -330,11 +335,14 @@ export default function ReservasClientePage() {
                 </strong>{' '}
                 el {formData.fecha} a las {formData.hora}.
               </p>
+              <p className="text-zinc-500 text-xs mt-2">
+                Revisa tu correo <strong>{formData.emailCliente}</strong> para ver la confirmación.
+              </p>
               <button
                 onClick={() => {
                   setReservaExitosa(false);
                   setMesaSeleccionada(null);
-                  fetchMesas();
+                  fetchMesas(); // Recargamos para pintar la mesa en rojo (ocupada)
                 }}
                 className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-2.5 rounded-lg transition text-sm cursor-pointer"
               >
