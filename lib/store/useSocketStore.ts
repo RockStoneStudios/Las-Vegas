@@ -1015,7 +1015,6 @@
 
 
 
-
 import { create } from 'zustand';
 
 // =============================================================
@@ -1076,7 +1075,7 @@ interface SocketState {
 // =============================================================
 // CONFIGURACIÓN + LOGS DE FLUJO
 // =============================================================
-const DEBUG = true; // 🔥 FORZADO A TRUE para que veas el flujo aunque sea production
+const DEBUG = true;
 const log = (...args: any[]) => {
   console.log('[FLUJO]', ...args);
 };
@@ -1180,7 +1179,6 @@ const borrarSesion = () => {
   try { localStorage.removeItem(STORAGE_KEY); } catch {}
 };
 
-// 🔥 FIX URL: Si NEXT_PUBLIC_API_URL ya termina en /api, no le agregamos otro /api
 const getBaseHttp = () => {
   const raw = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   return raw.replace(/\/$/, '').replace(/\/api$/, '');
@@ -1212,13 +1210,24 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         mesa = Number(match[1]);
         log(`📍 [CONECTAR] Mesa inferida de URL: ${mesa}`);
       } else {
-        log(`⚠️ [CONECTAR] No me pasaron mesa y no la encontré en URL: ${window.location.pathname}`);
+        log(`⚠ [CONECTAR] No me pasaron mesa y no la encontré en URL: ${window.location.pathname}`);
       }
     }
 
     if (!newSessionId || newSessionId === 'undefined' || newSessionId === 'null') {
       console.warn('⚠ SessionId inválido');
       return;
+    }
+
+    // 🔥 FIX 1 - ESTO ES LO QUE TE DAÑABA TODO
+    // Si el sessionId es DIFERENTE al anterior, es una sesión NUEVA.
+    // Reseteo la bandera de cerrada, si no, nunca deja conectar de nuevo.
+    const sessionAnterior = get().sessionId;
+    if (sessionAnterior && sessionAnterior !== newSessionId) {
+      log(`🆕 [CONECTAR] Session NUEVA detectada, reseteo bandera de mesa cerrada`);
+      mesaCerradaPorAdmin = false;
+      reconnectAttempts = 0;
+      limpiarTimers();
     }
 
     if (mesaCerradaPorAdmin) {
@@ -1244,7 +1253,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     }
 
     limpiarTimers();
-    mesaCerradaPorAdmin = false;
+    // No reseteo mesaCerradaPorAdmin acá si es la misma sesión, solo si es nueva (arriba)
 
     const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws') || 'ws://localhost:3001';
     const wsUrl = `${API_URL}/ws?sessionId=${encodeURIComponent(newSessionId)}`;
@@ -1261,6 +1270,20 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
       armarWatchdog(ws);
       set({ conectado: true });
+
+      // 🔥 FIX 2 - ESTO ES LO DE ANTES
+      // Me presento con socket NUEVO + session VIEJA para que Bun me reemplace en su Map
+      // Si solo dependemos del query param, Bun a veces se queda con el socket viejo
+      try {
+        ws.send(JSON.stringify({
+          tipo: 'unirse-mesa',
+          mesa: get().mesa,
+          sessionId: newSessionId,
+          rol: get().rol,
+        }));
+        log(`👋 [SOCKET] Me presenté con unirse-mesa, mesa=${get().mesa}`);
+      } catch {}
+
       emitir({ tipo: 'LOCAL:SOCKET_CONECTADO' });
     };
 
@@ -1280,7 +1303,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
           const miMesa = get().mesa;
           log(`🚪 [SOCKET] EVENT:MESA_CERRADA llegó, mi mesa es ${miMesa}, la cerrada es ${data.payload?.mesa}`);
           if (miMesa !== null && miMesa !== undefined && data.payload?.mesa !== miMesa) {
-            log(`ℹ️ [SOCKET] No es mi mesa, la ignoro`);
+            log(`ℹ [SOCKET] No es mi mesa, la ignoro`);
             return;
           }
           log(`🚪 [SOCKET] SÍ es mi mesa, voy a mostrar modal y cerrar todo`);
@@ -1344,6 +1367,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       if (watchdog) clearTimeout(watchdog);
       if (get().socket !== ws) return;
       log(`❌ [SOCKET] CERRADO | Código: ${event.code} | Razón: ${event.reason || 'Sin razón'} | mesaCerradaPorAdmin=${mesaCerradaPorAdmin}`);
+      const mesaQueSeCerro = get().mesa;
       set({ socket: null, conectado: false });
 
       if (mesaCerradaPorAdmin || event.code === 4002) {
@@ -1352,7 +1376,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         borrarSesion();
         limpiarTimers();
         if (event.reason !== 'Mesa cerrada por admin') {
-          emitir({ tipo: 'EVENT:MESA_CERRADA', payload: { mesa: get().mesa || 1, mensaje: 'Tu sesión ha finalizado. ¡Gracias por visitarnos!' } });
+          emitir({ tipo: 'EVENT:MESA_CERRADA', payload: { mesa: mesaQueSeCerro || 1, mensaje: 'Tu sesión ha finalizado. ¡Gracias por visitarnos!' } });
         }
         return;
       }
@@ -1393,7 +1417,8 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   restaurarSesion: () => {
     if (typeof window === 'undefined') return;
     if (get().sessionId) return;
-    if (mesaCerradaPorAdmin) return;
+    // 🔥 FIX: Si la bandera quedó en true de una sesión vieja, no bloqueo restaurar una nueva
+    // El conectarSocket ya se encarga de resetearla si el sessionId es diferente
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) { log('📦 [RESTAURAR] No hay sesión en localStorage'); return; }
@@ -1440,10 +1465,8 @@ if (typeof window !== 'undefined' && !(window as any).__wsListenersInstalados) {
       const res = await fetch(url);
       log(`🔍 [HTTP] Respuesta: status=${res.status} ok=${res.ok}`);
       if (!res.ok) {
-        // 🔥 FIX FOTO 1: Si da 404, es que el backend NO tiene el endpoint desplegado todavía
-        // No asumimos que seguimos vivos, lo dejamos en log bien visible
         console.error(`❌ [HTTP] El backend respondió ${res.status} en /sesion/estado. ¿Hiciste push + redeploy en Railway? URL: ${url}`);
-        return true; // No bloqueamos, dejamos que el socket intente
+        return true;
       }
       const data = await res.json();
       log(`🔍 [HTTP] Backend dice: estado=${data.estado} mesa=${data.mesa}`);
@@ -1477,7 +1500,7 @@ if (typeof window !== 'undefined' && !(window as any).__wsListenersInstalados) {
     }
     const { socket, conectado, sessionId, mesa, rol, conectarSocket } = useSocketStore.getState();
     if (!sessionId) {
-      log('⚠️ [VERIFICAR] No tengo sessionId, no hago nada');
+      log('⚠ [VERIFICAR] No tengo sessionId, no hago nada');
       return;
     }
 
