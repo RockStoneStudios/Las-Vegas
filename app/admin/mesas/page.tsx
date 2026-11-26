@@ -636,7 +636,7 @@ export default function AdminMesasPage() {
         </div>
       </div>
 
-      <div className={pantallaCompleta ? 'flex-1 min-h-0' : 'grid grid-cols-1 lg:grid-cols-4 gap-6'}>
+      <div className={pantallaCompleta ? 'flex-1 min-h-0 flex flex-col' : 'grid grid-cols-1 lg:grid-cols-4 gap-6'}>
         {/* PANEL LATERAL: FORMULARIO (se oculta en pantalla completa) */}
         {!pantallaCompleta && (
           <div className="lg:col-span-1 bg-zinc-900 p-4 rounded-xl border border-zinc-800 space-y-4">
