@@ -328,7 +328,8 @@ export default function ReservasClientePage() {
     setMesaSeleccionada(mesa);
     setFormData((prev) => ({
       ...prev,
-      personas: Math.min(prev.personas, mesa.capacidad),
+      // Asistentes toma la capacidad real de la mesa elegida (mesa normal: 4, VIP: 10)
+      personas: mesa.capacidad,
     }));
 
     // Anchor Scrolling: en móvil/tablet la vista baja automáticamente al formulario
