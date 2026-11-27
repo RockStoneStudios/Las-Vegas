@@ -123,7 +123,6 @@ export default function ReservasClientePage() {
     y0: number;
   } | null>(null);
   const dragDistRef = useRef(0);
-  const clickSuppressRef = useRef(false);
 
   const aplicarVista = () => {
     const { x, y, s } = vistaRef.current;
@@ -276,12 +275,16 @@ export default function ReservasClientePage() {
       panRef.current = null;
     }
 
-    // Si hubo arrastre real, el siguiente clic no debe seleccionar mesa
-    if (dragDistRef.current > 6) {
-      clickSuppressRef.current = true;
-      setTimeout(() => {
-        clickSuppressRef.current = false;
-      }, 80);
+    // Clic / tap corto (sin arrastre): seleccionar la mesa que está debajo
+    // del puntero. Con setPointerCapture el evento click no llega a la mesa,
+    // por eso la detectamos aquí directamente.
+    if (dragDistRef.current <= 6 && pointersRef.current.size === 0) {
+      const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const mesaId = el?.closest('[data-mesa-id]')?.getAttribute('data-mesa-id');
+      if (mesaId) {
+        const mesa = mesas.find((m) => m.id === mesaId);
+        if (mesa) handleSeleccionarMesa(mesa);
+      }
     }
   };
 
@@ -548,10 +551,7 @@ export default function ReservasClientePage() {
                   return (
                     <div
                       key={mesa.id}
-                      onClick={() => {
-                        if (clickSuppressRef.current) return; // fue arrastre, no clic
-                        handleSeleccionarMesa(mesa);
-                      }}
+                      data-mesa-id={mesa.id}
                       style={{
                         position: 'absolute',
                         left: `${mesa.posX}px`,
