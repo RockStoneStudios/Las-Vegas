@@ -100,36 +100,59 @@ export default function ReservasClientePage() {
     }
   };
 
+  // Vista actual (x, y, escala) para poder hacer zoom hacia el centro de la pantalla
+  const vistaRef = useRef({ x: 0, y: 0, scale: 1 });
+
   const onUpdate = useCallback(({ x, y, scale }: { x: number; y: number; scale: number }) => {
+    vistaRef.current = { x, y, scale };
     if (containerRef.current) {
       const value = make3dTransformValue({ x, y, scale });
       containerRef.current.style.setProperty('transform', value);
     }
   }, []);
 
-  const handleZoomIn = () => {
-    if (pinchZoomRef.current) {
-      pinchZoomRef.current.scaleTo({ x: 300, y: 250, scale: 1.5 });
-    }
+  // Acercar/alejar manteniendo el centro de la vista (no salta a un punto fijo)
+  const zoomHaciaCentro = (factor: number) => {
+    const wrapper = canvasWrapperRef.current;
+    const pinch = pinchZoomRef.current;
+    if (!wrapper || !pinch) return;
+
+    const { x, y, scale } = vistaRef.current;
+    const nuevaEscala = Math.min(3, Math.max(0.3, scale * factor));
+    if (nuevaEscala === scale) return;
+
+    const cx = wrapper.clientWidth / 2;
+    const cy = wrapper.clientHeight / 2;
+    const r = nuevaEscala / scale;
+
+    pinch.scaleTo({
+      x: cx - (cx - x) * r,
+      y: cy - (cy - y) * r,
+      scale: nuevaEscala,
+    });
   };
 
-  const handleZoomOut = () => {
-    if (pinchZoomRef.current) {
-      pinchZoomRef.current.scaleTo({ x: 300, y: 250, scale: 0.8 });
-    }
-  };
-
-  const handleResetZoom = () => {
-    if (pinchZoomRef.current) {
-      pinchZoomRef.current.scaleTo({ x: 0, y: 0, scale: 1 });
-    }
-  };
+  const handleZoomIn = () => zoomHaciaCentro(1.3);
+  const handleZoomOut = () => zoomHaciaCentro(1 / 1.3);
 
   // Calcular tamaño del contenedor basado en las mesas
   const containerWidth = Math.max(...mesas.map((m) => m.posX + (m.width || 64)), 600) + 100;
   const containerHeight = Math.max(...mesas.map((m) => m.posY + (m.height || 64)), 400) + 100;
 
-  // Ajustar el plano completo a la pantalla (auto-fit): calcula la escala y centra
+  // Vista inicial: zoom 100% (mesas grandes y legibles), centrado en el plano.
+  // El cliente se aleja cuando quiera para explorar el resto.
+  const centrarVista = useCallback(() => {
+    const wrapper = canvasWrapperRef.current;
+    const pinch = pinchZoomRef.current;
+    if (!wrapper || !pinch) return;
+
+    const x = (wrapper.clientWidth - containerWidth) / 2;
+    const y = (wrapper.clientHeight - containerHeight) / 2;
+
+    pinch.scaleTo({ x, y, scale: 1 });
+  }, [containerWidth, containerHeight]);
+
+  // "Ver todo": escala exacta para que el plano completo entre en pantalla
   const ajustarVista = useCallback(() => {
     const wrapper = canvasWrapperRef.current;
     const pinch = pinchZoomRef.current;
@@ -142,18 +165,18 @@ export default function ReservasClientePage() {
     );
     const escalaSegura = Math.max(escala, 0.3);
 
-    const x = Math.max(0, (wrapper.clientWidth - containerWidth * escalaSegura) / 2);
-    const y = Math.max(0, (wrapper.clientHeight - containerHeight * escalaSegura) / 2);
+    const x = (wrapper.clientWidth - containerWidth * escalaSegura) / 2;
+    const y = (wrapper.clientHeight - containerHeight * escalaSegura) / 2;
 
     pinch.scaleTo({ x, y, scale: escalaSegura });
   }, [containerWidth, containerHeight, mesas.length]);
 
-  // Auto-fit al cargar el mapa (y cada vez que se recargue la lista de mesas)
+  // Al cargar el mapa: vista inicial con zoom cercano (100%) y centrada
   useEffect(() => {
     if (loading || mesas.length === 0) return;
-    const t = setTimeout(() => ajustarVista(), 120);
+    const t = setTimeout(() => centrarVista(), 120);
     return () => clearTimeout(t);
-  }, [loading, mesas, ajustarVista]);
+  }, [loading, mesas, centrarVista]);
 
   // Zona de una posición del plano (según el plano: Z3·Z1 arriba, Z4·Z2 abajo)
   const getZonaDe = (x: number, y: number): ZonaId => {
@@ -257,8 +280,8 @@ export default function ReservasClientePage() {
             Reserva tu Lugar
           </h1>
           <p className="text-zinc-400 text-xs md:text-sm mt-1">
-            Toca una mesa disponible y el formulario se abre solo. En móvil usa dos dedos para
-            hacer zoom y explorar el plano por zonas.
+            El plano abre con zoom cercano: aléjate con Ctrl + rueda del mouse, dos dedos en
+            móvil o el botón de Ver todo. Toca una mesa libre y el formulario se abre solo.
           </p>
         </div>
 
@@ -304,15 +327,15 @@ export default function ReservasClientePage() {
                 type="button"
                 onClick={ajustarVista}
                 className="p-1.5 hover:bg-zinc-800 text-amber-300 hover:text-amber-200 rounded transition cursor-pointer"
-                title="Ajustar el plano completo a la pantalla"
+                title="Ver todo el plano de una vez"
               >
                 <Maximize2 size={16} />
               </button>
               <button
                 type="button"
-                onClick={handleResetZoom}
+                onClick={centrarVista}
                 className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded transition cursor-pointer"
-                title="Restablecer Vista"
+                title="Vista inicial (zoom 100%)"
               >
                 <RotateCcw size={16} />
               </button>
@@ -350,12 +373,12 @@ export default function ReservasClientePage() {
               <QuickPinchZoom
                 ref={pinchZoomRef}
                 onUpdate={onUpdate}
-                minZoom={0.5}
+                minZoom={0.3}
                 maxZoom={3}
                 zoomOutFactor={0}
                 enforceBoundsDuringZoom={false}
                 draggableUnZoomed={true}
-                shouldInterceptWheel={() => false}
+                shouldInterceptWheel={(e) => e.ctrlKey}
               >
                 <div
                   ref={containerRef}
