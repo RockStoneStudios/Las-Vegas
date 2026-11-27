@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import QuickPinchZoom, { make3dTransformValue } from 'react-quick-pinch-zoom';
+import { useState, useEffect, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -53,6 +52,11 @@ const COLORES_ZONA: Record<ZonaId, string> = {
   Z4: 'text-fuchsia-300 border-fuchsia-500/60',
 };
 
+// Límites de zoom del plano
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 3;
+const ZOOM_INICIAL = 1; // abre con zoom cercano: mesas grandes y legibles
+
 export default function ReservasClientePage() {
   const [mesas, setMesas] = useState<IMesa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +67,6 @@ export default function ReservasClientePage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  const pinchZoomRef = useRef<any>(null);
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -100,83 +103,210 @@ export default function ReservasClientePage() {
     }
   };
 
-  // Vista actual (x, y, escala) para poder hacer zoom hacia el centro de la pantalla
-  const vistaRef = useRef({ x: 0, y: 0, scale: 1 });
-
-  const onUpdate = useCallback(({ x, y, scale }: { x: number; y: number; scale: number }) => {
-    vistaRef.current = { x, y, scale };
-    if (containerRef.current) {
-      const value = make3dTransformValue({ x, y, scale });
-      containerRef.current.style.setProperty('transform', value);
-    }
-  }, []);
-
-  // Acercar/alejar manteniendo el centro de la vista (no salta a un punto fijo)
-  const zoomHaciaCentro = (factor: number) => {
-    const wrapper = canvasWrapperRef.current;
-    const pinch = pinchZoomRef.current;
-    if (!wrapper || !pinch) return;
-
-    const { x, y, scale } = vistaRef.current;
-    const nuevaEscala = Math.min(3, Math.max(0.3, scale * factor));
-    if (nuevaEscala === scale) return;
-
-    const cx = wrapper.clientWidth / 2;
-    const cy = wrapper.clientHeight / 2;
-    const r = nuevaEscala / scale;
-
-    pinch.scaleTo({
-      x: cx - (cx - x) * r,
-      y: cy - (cy - y) * r,
-      scale: nuevaEscala,
-    });
-  };
-
-  const handleZoomIn = () => zoomHaciaCentro(1.3);
-  const handleZoomOut = () => zoomHaciaCentro(1 / 1.3);
-
-  // Calcular tamaño del contenedor basado en las mesas
+  // Calcular tamaño del plano basado en las mesas
   const containerWidth = Math.max(...mesas.map((m) => m.posX + (m.width || 64)), 600) + 100;
   const containerHeight = Math.max(...mesas.map((m) => m.posY + (m.height || 64)), 400) + 100;
 
-  // Vista inicial: zoom 100% (mesas grandes y legibles), centrado en el plano.
-  // El cliente se aleja cuando quiera para explorar el resto.
-  const centrarVista = useCallback(() => {
+  // ============================================================
+  // ZOOM Y PAN PROPIOS (sin librerías): control total de la vista
+  // ============================================================
+  type Vista = { x: number; y: number; s: number };
+  const vistaRef = useRef<Vista>({ x: 0, y: 0, s: ZOOM_INICIAL });
+  const pointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const panRef = useRef<{ px: number; py: number; x0: number; y0: number } | null>(null);
+  const pinchRef = useRef<{
+    d0: number;
+    cx0: number;
+    cy0: number;
+    s0: number;
+    x0: number;
+    y0: number;
+  } | null>(null);
+  const dragDistRef = useRef(0);
+  const clickSuppressRef = useRef(false);
+
+  const aplicarVista = () => {
+    const { x, y, s } = vistaRef.current;
+    if (containerRef.current) {
+      containerRef.current.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
+    }
+  };
+
+  // Mantener el plano siempre a la vista (no se puede "perder" arrastrando)
+  const clampVista = (v: Vista): Vista => {
     const wrapper = canvasWrapperRef.current;
-    const pinch = pinchZoomRef.current;
-    if (!wrapper || !pinch) return;
+    if (!wrapper) return v;
+    const loX = Math.min(0, wrapper.clientWidth - containerWidth * v.s);
+    const hiX = Math.max(0, wrapper.clientWidth - containerWidth * v.s);
+    const loY = Math.min(0, wrapper.clientHeight - containerHeight * v.s);
+    const hiY = Math.max(0, wrapper.clientHeight - containerHeight * v.s);
+    return {
+      s: v.s,
+      x: Math.min(hiX, Math.max(loX, v.x)),
+      y: Math.min(hiY, Math.max(loY, v.y)),
+    };
+  };
 
-    const x = (wrapper.clientWidth - containerWidth) / 2;
-    const y = (wrapper.clientHeight - containerHeight) / 2;
+  const fijarVista = (v: Vista) => {
+    vistaRef.current = clampVista(v);
+    aplicarVista();
+  };
 
-    pinch.scaleTo({ x, y, scale: 1 });
-  }, [containerWidth, containerHeight]);
-
-  // "Ver todo": escala exacta para que el plano completo entre en pantalla
-  const ajustarVista = useCallback(() => {
+  // Vista inicial: zoom cercano (100%), centrado en el plano
+  const centrarVista = () => {
     const wrapper = canvasWrapperRef.current;
-    const pinch = pinchZoomRef.current;
-    if (!wrapper || !pinch || mesas.length === 0) return;
+    if (!wrapper) return;
+    fijarVista({
+      x: (wrapper.clientWidth - containerWidth) / 2,
+      y: (wrapper.clientHeight - containerHeight) / 2,
+      s: ZOOM_INICIAL,
+    });
+  };
 
-    const escala = Math.min(
-      (wrapper.clientWidth - 8) / containerWidth,
-      (wrapper.clientHeight - 8) / containerHeight,
-      1.2 // no agrandar de más en pantallas grandes
+  // Ver todo: escala exacta para que el plano completo entre en pantalla
+  const ajustarVista = () => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper) return;
+    const s = Math.min(
+      Math.max((wrapper.clientWidth - 16) / containerWidth, ZOOM_MIN),
+      Math.max((wrapper.clientHeight - 16) / containerHeight, ZOOM_MIN),
+      1
     );
-    const escalaSegura = Math.max(escala, 0.3);
+    fijarVista({
+      x: (wrapper.clientWidth - containerWidth * s) / 2,
+      y: (wrapper.clientHeight - containerHeight * s) / 2,
+      s,
+    });
+  };
 
-    const x = (wrapper.clientWidth - containerWidth * escalaSegura) / 2;
-    const y = (wrapper.clientHeight - containerHeight * escalaSegura) / 2;
+  // Acercar/alejar hacia un punto de la vista (por defecto el centro)
+  const zoomEn = (factor: number, fx?: number, fy?: number) => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper) return;
+    const { x, y, s } = vistaRef.current;
+    const s2 = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, s * factor));
+    if (s2 === s) return;
+    const cx = fx ?? wrapper.clientWidth / 2;
+    const cy = fy ?? wrapper.clientHeight / 2;
+    fijarVista({
+      x: cx - ((cx - x) / s) * s2,
+      y: cy - ((cy - y) / s) * s2,
+      s: s2,
+    });
+  };
 
-    pinch.scaleTo({ x, y, scale: escalaSegura });
-  }, [containerWidth, containerHeight, mesas.length]);
+  const handleZoomIn = () => zoomEn(1.3);
+  const handleZoomOut = () => zoomEn(1 / 1.3);
 
-  // Al cargar el mapa: vista inicial con zoom cercano (100%) y centrada
+  // Pan con 1 dedo/mouse y pellizco con 2 dedos (Pointer Events)
+  const manejarPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper) return;
+    wrapper.setPointerCapture(e.pointerId);
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    dragDistRef.current = 0;
+
+    if (pointersRef.current.size === 1) {
+      panRef.current = {
+        px: e.clientX,
+        py: e.clientY,
+        x0: vistaRef.current.x,
+        y0: vistaRef.current.y,
+      };
+      pinchRef.current = null;
+    } else if (pointersRef.current.size === 2) {
+      const [a, b] = [...pointersRef.current.values()];
+      const rect = wrapper.getBoundingClientRect();
+      pinchRef.current = {
+        d0: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+        cx0: (a.x + b.x) / 2 - rect.left,
+        cy0: (a.y + b.y) / 2 - rect.top,
+        s0: vistaRef.current.s,
+        x0: vistaRef.current.x,
+        y0: vistaRef.current.y,
+      };
+      panRef.current = null;
+    }
+  };
+
+  const manejarPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper || !pointersRef.current.has(e.pointerId)) return;
+    pointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Pellizco: la escala sigue la distancia entre dedos, anclada al punto medio
+    if (pointersRef.current.size === 2 && pinchRef.current) {
+      const [a, b] = [...pointersRef.current.values()];
+      const rect = wrapper.getBoundingClientRect();
+      const d = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      const cx = (a.x + b.x) / 2 - rect.left;
+      const cy = (a.y + b.y) / 2 - rect.top;
+      const g = pinchRef.current;
+      const s2 = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, (g.s0 * d) / g.d0));
+      const fx = (g.cx0 - g.x0) / g.s0;
+      const fy = (g.cy0 - g.y0) / g.s0;
+      fijarVista({ x: cx - fx * s2, y: cy - fy * s2, s: s2 });
+      dragDistRef.current = 99;
+      return;
+    }
+
+    // Pan con un solo dedo / mouse
+    if (pointersRef.current.size === 1 && panRef.current) {
+      const p = panRef.current;
+      const dx = e.clientX - p.px;
+      const dy = e.clientY - p.py;
+      dragDistRef.current = Math.max(dragDistRef.current, Math.hypot(dx, dy));
+      fijarVista({ x: p.x0 + dx, y: p.y0 + dy, s: vistaRef.current.s });
+    }
+  };
+
+  const manejarPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    pointersRef.current.delete(e.pointerId);
+    pinchRef.current = null;
+
+    if (pointersRef.current.size === 1) {
+      const restante = [...pointersRef.current.values()][0];
+      panRef.current = {
+        px: restante.x,
+        py: restante.y,
+        x0: vistaRef.current.x,
+        y0: vistaRef.current.y,
+      };
+    } else {
+      panRef.current = null;
+    }
+
+    // Si hubo arrastre real, el siguiente clic no debe seleccionar mesa
+    if (dragDistRef.current > 6) {
+      clickSuppressRef.current = true;
+      setTimeout(() => {
+        clickSuppressRef.current = false;
+      }, 80);
+    }
+  };
+
+  // Ctrl + rueda del mouse hace zoom alrededor del cursor (la rueda sola baja la página)
+  useEffect(() => {
+    const wrapper = canvasWrapperRef.current;
+    if (!wrapper) return;
+    const manejarRueda = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const rect = wrapper.getBoundingClientRect();
+      zoomEn(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - rect.left, e.clientY - rect.top);
+    };
+    wrapper.addEventListener('wheel', manejarRueda, { passive: false });
+    return () => wrapper.removeEventListener('wheel', manejarRueda);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Al cargar el mapa: vista inicial con zoom cercano y centrada
   useEffect(() => {
     if (loading || mesas.length === 0) return;
     const t = setTimeout(() => centrarVista(), 120);
     return () => clearTimeout(t);
-  }, [loading, mesas, centrarVista]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, mesas]);
 
   // Zona de una posición del plano (según el plano: Z3·Z1 arriba, Z4·Z2 abajo)
   const getZonaDe = (x: number, y: number): ZonaId => {
@@ -280,8 +410,8 @@ export default function ReservasClientePage() {
             Reserva tu Lugar
           </h1>
           <p className="text-zinc-400 text-xs md:text-sm mt-1">
-            El plano abre con zoom cercano: aléjate con Ctrl + rueda del mouse, dos dedos en
-            móvil o el botón de Ver todo. Toca una mesa libre y el formulario se abre solo.
+            El plano abre con zoom cercano: arrastra para moverte, aléjate con dos dedos (o Ctrl +
+            rueda en PC) o pulsa Ver todo. Toca una mesa libre y el formulario se abre solo.
           </p>
         </div>
 
@@ -303,7 +433,7 @@ export default function ReservasClientePage() {
         <div className="lg:col-span-2 bg-zinc-950 p-4 rounded-xl border border-zinc-800 relative overflow-hidden">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-sm font-semibold text-zinc-400">
-              Plano Interactivo por Zonas (Pinch &amp; Pan)
+              Plano Interactivo por Zonas
             </h2>
 
             <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800 z-10">
@@ -311,7 +441,7 @@ export default function ReservasClientePage() {
                 type="button"
                 onClick={handleZoomIn}
                 className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded transition cursor-pointer"
-                title="Aumentar Zoom"
+                title="Acercar"
               >
                 <ZoomIn size={16} />
               </button>
@@ -319,7 +449,7 @@ export default function ReservasClientePage() {
                 type="button"
                 onClick={handleZoomOut}
                 className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded transition cursor-pointer"
-                title="Reducir Zoom"
+                title="Alejar"
               >
                 <ZoomOut size={16} />
               </button>
@@ -335,7 +465,7 @@ export default function ReservasClientePage() {
                 type="button"
                 onClick={centrarVista}
                 className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded transition cursor-pointer"
-                title="Vista inicial (zoom 100%)"
+                title="Vista inicial (zoom cercano)"
               >
                 <RotateCcw size={16} />
               </button>
@@ -368,102 +498,100 @@ export default function ReservasClientePage() {
           ) : (
             <div
               ref={canvasWrapperRef}
-              className="relative w-full h-[550px] bg-zinc-900/50 rounded-lg border border-dashed border-zinc-800 overflow-hidden"
+              className="relative w-full h-[550px] bg-zinc-900/50 rounded-lg border border-dashed border-zinc-800 overflow-hidden cursor-grab active:cursor-grabbing"
+              style={{ touchAction: 'none' }}
+              onPointerDown={manejarPointerDown}
+              onPointerMove={manejarPointerMove}
+              onPointerUp={manejarPointerUp}
+              onPointerCancel={manejarPointerUp}
             >
-              <QuickPinchZoom
-                ref={pinchZoomRef}
-                onUpdate={onUpdate}
-                minZoom={0.3}
-                maxZoom={3}
-                zoomOutFactor={0}
-                enforceBoundsDuringZoom={false}
-                draggableUnZoomed={true}
-                shouldInterceptWheel={(e) => e.ctrlKey}
+              <div
+                ref={containerRef}
+                className="relative select-none origin-top-left"
+                style={{
+                  width: `${containerWidth}px`,
+                  height: `${containerHeight}px`,
+                  transform: 'translate(0px, 0px) scale(1)',
+                  backgroundImage:
+                    'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)',
+                  backgroundSize: '20px 20px',
+                }}
               >
-                <div
-                  ref={containerRef}
-                  className="relative select-none origin-top-left"
-                  style={{
-                    width: `${containerWidth}px`,
-                    height: `${containerHeight}px`,
-                    backgroundImage:
-                      'radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)',
-                    backgroundSize: '20px 20px',
-                  }}
-                >
-                  {/* DIVISIÓN POR ZONAS (decorativa, escala junto con el plano) */}
-                  {ZONAS.map((z) => (
-                    <div
-                      key={z}
-                      className="absolute pointer-events-none border border-dashed z-0"
-                      style={{
-                        left: POSICION_ZONA[z].left,
-                        top: POSICION_ZONA[z].top,
-                        width: '50%',
-                        height: '50%',
-                      }}
+                {/* DIVISIÓN POR ZONAS (decorativa, escala junto con el plano) */}
+                {ZONAS.map((z) => (
+                  <div
+                    key={z}
+                    className="absolute pointer-events-none border border-dashed z-0"
+                    style={{
+                      left: POSICION_ZONA[z].left,
+                      top: POSICION_ZONA[z].top,
+                      width: '50%',
+                      height: '50%',
+                    }}
+                  >
+                    <span
+                      className={`absolute top-1 left-1 text-[10px] font-bold px-1.5 py-0.5 rounded border bg-zinc-950/80 ${
+                        COLORES_ZONA[z]
+                      }`}
                     >
-                      <span
-                        className={`absolute top-1 left-1 text-[10px] font-bold px-1.5 py-0.5 rounded border bg-zinc-950/80 ${
-                          COLORES_ZONA[z]
-                        }`}
-                      >
-                        {z}
-                      </span>
-                    </div>
-                  ))}
+                      {z}
+                    </span>
+                  </div>
+                ))}
 
-                  {mesas.map((mesa) => {
-                    // Tamaño mínimo al renderizar: las mesas muy pequeñas siguen
-                    // siendo legibles y fáciles de tocar en móvil
-                    const mesaWidth = Math.max(mesa.width || 64, 44);
-                    const mesaHeight = Math.max(mesa.height || 64, 40);
+                {mesas.map((mesa) => {
+                  // Tamaño mínimo al renderizar: las mesas muy pequeñas siguen
+                  // siendo legibles y fáciles de tocar en móvil
+                  const mesaWidth = Math.max(mesa.width || 64, 44);
+                  const mesaHeight = Math.max(mesa.height || 64, 40);
 
-                    return (
-                      <div
-                        key={mesa.id}
-                        onClick={() => handleSeleccionarMesa(mesa)}
-                        style={{
-                          position: 'absolute',
-                          left: `${mesa.posX}px`,
-                          top: `${mesa.posY}px`,
-                          width: `${mesaWidth}px`,
-                          height: `${mesaHeight}px`,
-                        }}
-                        className={`border-2 rounded-xl p-2 flex flex-col justify-between shadow-lg transition-all ${getEstiloMesa(mesa)}`}
-                      >
-                        <div className="flex justify-between items-center gap-1">
-                          <span
-                            className="font-bold text-sm truncate flex items-center gap-1"
-                            title={mesa.numero}
-                          >
-                            {mesa.tipo === 'PISTA_BAILE' && (
-                              <Disc size={14} className="animate-spin shrink-0" />
-                            )}
-                            {mesa.numero}
-                          </span>
-                          {mesa.tipo === 'VIP' && (
-                            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40 shrink-0">
-                              VIP
-                            </span>
+                  return (
+                    <div
+                      key={mesa.id}
+                      onClick={() => {
+                        if (clickSuppressRef.current) return; // fue arrastre, no clic
+                        handleSeleccionarMesa(mesa);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        left: `${mesa.posX}px`,
+                        top: `${mesa.posY}px`,
+                        width: `${mesaWidth}px`,
+                        height: `${mesaHeight}px`,
+                      }}
+                      className={`border-2 rounded-xl p-2 flex flex-col justify-between shadow-lg transition-all ${getEstiloMesa(mesa)}`}
+                    >
+                      <div className="flex justify-between items-center gap-1">
+                        <span
+                          className="font-bold text-sm truncate flex items-center gap-1"
+                          title={mesa.numero}
+                        >
+                          {mesa.tipo === 'PISTA_BAILE' && (
+                            <Disc size={14} className="animate-spin shrink-0" />
                           )}
-                        </div>
-
-                        {mesa.tipo !== 'ESCENARIO' && mesa.tipo !== 'PISTA_BAILE' && (
-                          <div className="flex justify-between items-end text-[11px] opacity-90">
-                            <span className="flex items-center gap-1">
-                              <Users size={12} className="shrink-0" /> Cap. {mesa.capacidad}
-                            </span>
-                            {mesa.estado === 'OCUPADA' && (
-                              <span className="font-bold text-red-400">Ocupada</span>
-                            )}
-                          </div>
+                          {mesa.numero}
+                        </span>
+                        {mesa.tipo === 'VIP' && (
+                          <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40 shrink-0">
+                            VIP
+                          </span>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              </QuickPinchZoom>
+
+                      {mesa.tipo !== 'ESCENARIO' && mesa.tipo !== 'PISTA_BAILE' && (
+                        <div className="flex justify-between items-end text-[11px] opacity-90">
+                          <span className="flex items-center gap-1">
+                            <Users size={12} className="shrink-0" /> Cap. {mesa.capacidad}
+                          </span>
+                          {mesa.estado === 'OCUPADA' && (
+                            <span className="font-bold text-red-400">Ocupada</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
