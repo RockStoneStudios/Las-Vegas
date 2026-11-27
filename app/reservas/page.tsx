@@ -14,6 +14,8 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Maximize2,
+  MapPin,
 } from 'lucide-react';
 
 interface IMesa {
@@ -31,6 +33,26 @@ interface IMesa {
 // Forzamos el puerto 3001 donde está corriendo tu Elysia
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+// Zonas del lienzo según el plano del local (igual que el editor admin):
+// Z3 (arriba-izq) · Z1 (arriba-der) · Z4 (abajo-izq) · Z2 (abajo-der)
+type ZonaId = 'Z1' | 'Z2' | 'Z3' | 'Z4';
+
+const ZONAS: ZonaId[] = ['Z1', 'Z2', 'Z3', 'Z4'];
+
+const POSICION_ZONA: Record<ZonaId, { left: string; top: string }> = {
+  Z1: { left: '50%', top: '0%' },
+  Z2: { left: '50%', top: '50%' },
+  Z3: { left: '0%', top: '0%' },
+  Z4: { left: '0%', top: '50%' },
+};
+
+const COLORES_ZONA: Record<ZonaId, string> = {
+  Z1: 'text-emerald-300 border-emerald-500/60',
+  Z2: 'text-sky-300 border-sky-500/60',
+  Z3: 'text-orange-300 border-orange-500/60',
+  Z4: 'text-fuchsia-300 border-fuchsia-500/60',
+};
+
 export default function ReservasClientePage() {
   const [mesas, setMesas] = useState<IMesa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +61,8 @@ export default function ReservasClientePage() {
   const [reservaExitosa, setReservaExitosa] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
   const pinchZoomRef = useRef<any>(null);
 
   const [formData, setFormData] = useState({
@@ -60,7 +84,7 @@ export default function ReservasClientePage() {
       setLoading(true);
       // Petición limpia a la ruta que ya tienes en tu backend
       const res = await fetch(`${API_URL}/mesas`);
-      
+
       if (!res.ok) {
         throw new Error(`Error HTTP: ${res.status}`);
       }
@@ -101,6 +125,46 @@ export default function ReservasClientePage() {
     }
   };
 
+  // Calcular tamaño del contenedor basado en las mesas
+  const containerWidth = Math.max(...mesas.map((m) => m.posX + (m.width || 64)), 600) + 100;
+  const containerHeight = Math.max(...mesas.map((m) => m.posY + (m.height || 64)), 400) + 100;
+
+  // Ajustar el plano completo a la pantalla (auto-fit): calcula la escala y centra
+  const ajustarVista = useCallback(() => {
+    const wrapper = canvasWrapperRef.current;
+    const pinch = pinchZoomRef.current;
+    if (!wrapper || !pinch || mesas.length === 0) return;
+
+    const escala = Math.min(
+      (wrapper.clientWidth - 8) / containerWidth,
+      (wrapper.clientHeight - 8) / containerHeight,
+      1.2 // no agrandar de más en pantallas grandes
+    );
+    const escalaSegura = Math.max(escala, 0.3);
+
+    const x = Math.max(0, (wrapper.clientWidth - containerWidth * escalaSegura) / 2);
+    const y = Math.max(0, (wrapper.clientHeight - containerHeight * escalaSegura) / 2);
+
+    pinch.scaleTo({ x, y, scale: escalaSegura });
+  }, [containerWidth, containerHeight, mesas.length]);
+
+  // Auto-fit al cargar el mapa (y cada vez que se recargue la lista de mesas)
+  useEffect(() => {
+    if (loading || mesas.length === 0) return;
+    const t = setTimeout(() => ajustarVista(), 120);
+    return () => clearTimeout(t);
+  }, [loading, mesas, ajustarVista]);
+
+  // Zona de una posición del plano (según el plano: Z3·Z1 arriba, Z4·Z2 abajo)
+  const getZonaDe = (x: number, y: number): ZonaId => {
+    const arriba = y < containerHeight / 2;
+    const derecha = x >= containerWidth / 2;
+    if (arriba && derecha) return 'Z1';
+    if (!arriba && derecha) return 'Z2';
+    if (arriba && !derecha) return 'Z3';
+    return 'Z4';
+  };
+
   const handleSeleccionarMesa = (mesa: IMesa) => {
     if (mesa.tipo === 'ESCENARIO' || mesa.tipo === 'PISTA_BAILE') return;
     if (mesa.estado === 'OCUPADA' || mesa.estado === 'RESERVADA') return;
@@ -110,6 +174,13 @@ export default function ReservasClientePage() {
       ...prev,
       personas: Math.min(prev.personas, mesa.capacidad),
     }));
+
+    // Anchor Scrolling: en móvil/tablet la vista baja automáticamente al formulario
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 80);
+    }
   };
 
   const handleCrearReserva = async (e: React.FormEvent) => {
@@ -177,10 +248,6 @@ export default function ReservasClientePage() {
     return 'bg-zinc-800/80 border-zinc-600 text-zinc-200 hover:border-zinc-400 cursor-pointer';
   };
 
-  // Calcular tamaño del contenedor basado en las mesas
-  const containerWidth = Math.max(...mesas.map(m => m.posX + (m.width || 80)), 600) + 100;
-  const containerHeight = Math.max(...mesas.map(m => m.posY + (m.height || 80)), 400) + 100;
-
   return (
     <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6 text-white min-h-screen">
       {/* HEADER */}
@@ -190,7 +257,8 @@ export default function ReservasClientePage() {
             Reserva tu Lugar
           </h1>
           <p className="text-zinc-400 text-xs md:text-sm mt-1">
-            Usa dos dedos en móvil o la rueda del mouse para hacer zoom y explorar el plano.
+            Toca una mesa disponible y el formulario se abre solo. En móvil usa dos dedos para
+            hacer zoom y explorar el plano por zonas.
           </p>
         </div>
 
@@ -212,7 +280,7 @@ export default function ReservasClientePage() {
         <div className="lg:col-span-2 bg-zinc-950 p-4 rounded-xl border border-zinc-800 relative overflow-hidden">
           <div className="flex justify-between items-center mb-3">
             <h2 className="text-sm font-semibold text-zinc-400">
-              Plano Interactivo (Pinch & Pan)
+              Plano Interactivo por Zonas (Pinch &amp; Pan)
             </h2>
 
             <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-lg border border-zinc-800 z-10">
@@ -234,6 +302,14 @@ export default function ReservasClientePage() {
               </button>
               <button
                 type="button"
+                onClick={ajustarVista}
+                className="p-1.5 hover:bg-zinc-800 text-amber-300 hover:text-amber-200 rounded transition cursor-pointer"
+                title="Ajustar el plano completo a la pantalla"
+              >
+                <Maximize2 size={16} />
+              </button>
+              <button
+                type="button"
                 onClick={handleResetZoom}
                 className="p-1.5 hover:bg-zinc-800 text-zinc-300 hover:text-white rounded transition cursor-pointer"
                 title="Restablecer Vista"
@@ -243,12 +319,34 @@ export default function ReservasClientePage() {
             </div>
           </div>
 
+          {/* LEYENDA DE ZONAS con conteo de elementos */}
+          {!loading && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              {ZONAS.map((z) => (
+                <span
+                  key={z}
+                  className={`text-[11px] font-semibold px-2 py-1 rounded border bg-zinc-900/60 ${
+                    COLORES_ZONA[z]
+                  }`}
+                >
+                  {z}: {mesas.filter((m) => getZonaDe(m.posX, m.posY) === z).length}
+                </span>
+              ))}
+              <span className="text-[11px] text-zinc-500 ml-auto hidden sm:inline">
+                Z3 · Z1 arriba — Z4 · Z2 abajo
+              </span>
+            </div>
+          )}
+
           {loading ? (
             <div className="h-[550px] flex items-center justify-center text-zinc-500">
               Cargando mapa...
             </div>
           ) : (
-            <div className="relative w-full h-[550px] bg-zinc-900/50 rounded-lg border border-dashed border-zinc-800 overflow-hidden">
+            <div
+              ref={canvasWrapperRef}
+              className="relative w-full h-[550px] bg-zinc-900/50 rounded-lg border border-dashed border-zinc-800 overflow-hidden"
+            >
               <QuickPinchZoom
                 ref={pinchZoomRef}
                 onUpdate={onUpdate}
@@ -270,9 +368,33 @@ export default function ReservasClientePage() {
                     backgroundSize: '20px 20px',
                   }}
                 >
+                  {/* DIVISIÓN POR ZONAS (decorativa, escala junto con el plano) */}
+                  {ZONAS.map((z) => (
+                    <div
+                      key={z}
+                      className="absolute pointer-events-none border border-dashed z-0"
+                      style={{
+                        left: POSICION_ZONA[z].left,
+                        top: POSICION_ZONA[z].top,
+                        width: '50%',
+                        height: '50%',
+                      }}
+                    >
+                      <span
+                        className={`absolute top-1 left-1 text-[10px] font-bold px-1.5 py-0.5 rounded border bg-zinc-950/80 ${
+                          COLORES_ZONA[z]
+                        }`}
+                      >
+                        {z}
+                      </span>
+                    </div>
+                  ))}
+
                   {mesas.map((mesa) => {
-                    const mesaWidth = mesa.width || 80;
-                    const mesaHeight = mesa.height || 80;
+                    // Tamaño mínimo al renderizar: las mesas muy pequeñas siguen
+                    // siendo legibles y fáciles de tocar en móvil
+                    const mesaWidth = Math.max(mesa.width || 64, 44);
+                    const mesaHeight = Math.max(mesa.height || 64, 40);
 
                     return (
                       <div
@@ -287,24 +409,27 @@ export default function ReservasClientePage() {
                         }}
                         className={`border-2 rounded-xl p-2 flex flex-col justify-between shadow-lg transition-all ${getEstiloMesa(mesa)}`}
                       >
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-base sm:text-xs truncate flex items-center gap-1">
+                        <div className="flex justify-between items-center gap-1">
+                          <span
+                            className="font-bold text-sm truncate flex items-center gap-1"
+                            title={mesa.numero}
+                          >
                             {mesa.tipo === 'PISTA_BAILE' && (
-                              <Disc size={16} className="sm:w-3 sm:h-3 animate-spin" />
+                              <Disc size={14} className="animate-spin shrink-0" />
                             )}
                             {mesa.numero}
                           </span>
                           {mesa.tipo === 'VIP' && (
-                            <span className="text-sm sm:text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40">
+                            <span className="text-[10px] bg-amber-500/20 text-amber-300 font-bold px-1.5 py-0.5 rounded border border-amber-500/40 shrink-0">
                               VIP
                             </span>
                           )}
                         </div>
 
                         {mesa.tipo !== 'ESCENARIO' && mesa.tipo !== 'PISTA_BAILE' && (
-                          <div className="flex justify-between items-end text-sm sm:text-[10px] opacity-90">
+                          <div className="flex justify-between items-end text-[11px] opacity-90">
                             <span className="flex items-center gap-1">
-                              <Users size={14} className="sm:w-2.5 sm:h-2.5" /> Cap. {mesa.capacidad}
+                              <Users size={12} className="shrink-0" /> Cap. {mesa.capacidad}
                             </span>
                             {mesa.estado === 'OCUPADA' && (
                               <span className="font-bold text-red-400">Ocupada</span>
@@ -320,8 +445,8 @@ export default function ReservasClientePage() {
           )}
         </div>
 
-        {/* PANEL DE FORMULARIO */}
-        <div className="bg-zinc-900 p-5 rounded-xl border border-zinc-800 space-y-5">
+        {/* PANEL DE FORMULARIO (recibe el Anchor Scrolling al elegir mesa) */}
+        <div ref={formRef} id="form-reserva" className="bg-zinc-900 p-5 rounded-xl border border-zinc-800 space-y-5 scroll-mt-4">
           {reservaExitosa ? (
             <div className="text-center py-12 space-y-4">
               <CheckCircle className="text-emerald-500 mx-auto" size={56} />
@@ -355,10 +480,16 @@ export default function ReservasClientePage() {
                 Detalles de Reserva
               </h2>
 
-              <div className="p-3 bg-zinc-950 rounded-lg border border-zinc-800 flex items-center justify-between">
+              <div
+                className={`p-3 bg-zinc-950 rounded-lg border flex items-center justify-between transition ${
+                  mesaSeleccionada
+                    ? 'border-amber-500/60 ring-1 ring-amber-500/30'
+                    : 'border-zinc-800'
+                }`}
+              >
                 <div>
-                  <span className="text-xs text-zinc-400 block">
-                    Ubicación elegida:
+                  <span className="text-xs text-zinc-400 block flex items-center gap-1">
+                    <MapPin size={12} /> Ubicación elegida:
                   </span>
                   <span className="font-bold text-amber-400 text-base">
                     {mesaSeleccionada
@@ -367,7 +498,7 @@ export default function ReservasClientePage() {
                   </span>
                 </div>
                 {mesaSeleccionada && (
-                  <span className="text-xs text-zinc-400 bg-zinc-800 px-2 py-1 rounded">
+                  <span className="text-xs text-zinc-400 bg-zinc-800 px-2 py-1 rounded shrink-0">
                     Máx {mesaSeleccionada.capacidad} pers.
                   </span>
                 )}
